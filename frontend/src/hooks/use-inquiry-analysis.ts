@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from './use-api'
 import { inquiryResponse, jobSummary, loadAnalysis } from '@/lib/inquiry-api'
@@ -22,8 +23,11 @@ export function useInquiryAnalysis(inquiryId: string) {
     enabled: !!jobId,
     refetchInterval: (query) => query.state.data?.status === 'queued' || query.state.data?.status === 'running' ? 2000 : false,
   })
+  const inquiryData = useMemo(() => inquiry.data ? {
+    ...inquiry.data, processing_job: job.data ? jobSummary(job.data) : null,
+  } : undefined, [inquiry.data, job.data])
   return {
-    inquiry: { ...inquiry, data: inquiry.data ? { ...inquiry.data, processing_job: job.data ? jobSummary(job.data) : null } : undefined },
+    inquiry: { ...inquiry, data: inquiryData },
     analysis,
   }
 }

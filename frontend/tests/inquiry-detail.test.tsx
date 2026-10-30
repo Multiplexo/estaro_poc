@@ -25,7 +25,7 @@ const analysis: AnalysisResponse = {
   },
 }
 
-test('overview shows saved corrections and the saved review status and traffic light', () => {
+test('overview preserves saved corrections and position approval while the review is incomplete', () => {
   const detail = inquiryDetail(inquiry, { ...analysis, review: {
     revision: 2, fields: {
       delivery_date: { value: '03.12.2026', confirmed: true },
@@ -35,7 +35,7 @@ test('overview shows saved corrections and the saved review status and traffic l
   } })
   expect(detail.deliveryDate).toBe('03.12.2026')
   expect(detail.positions[0].fields.find((entry) => entry.kind === 'quantity')?.value).toBe('20')
-  expect(detail.reviewStatus).toBe('reviewed')
+  expect(detail.reviewStatus).toBe('in_review')
   expect(detail.trafficLight).toMatchObject({ color: 'green', origin: 'manual' })
   expect(detail.confirmedPositions).toBe(1)
 })

@@ -7,13 +7,13 @@ const appearances = {
   red: { label: 'Rot', classes: 'border-red-200 bg-red-50 text-red-800', dot: 'bg-red-600' },
 }
 
-export function InquiryScore({ inquiry }: { inquiry: InboxInquiry }) {
+export function InquiryScore({ inquiry, compact = false }: { inquiry: InboxInquiry; compact?: boolean }) {
   const status = inquiry.trafficLight
   const appearance = appearances[status.color]
   const origin = status.origin === 'manual' ? 'Manuell bestätigt' : 'Systembewertung'
   return (
-    <Badge variant="outline" className={`${appearance.classes} h-auto max-w-full gap-2 px-3 py-2 text-sm font-semibold whitespace-normal`} title={`${origin}: ${status.reasons.join('; ')}`} aria-label={`Ampel: ${appearance.label}. ${origin}. ${status.reasons.join('; ')}`}>
-      <span aria-hidden="true" className={`size-3 shrink-0 rounded-full ${appearance.dot}`} />
+    <Badge variant="outline" className={`${appearance.classes} h-auto max-w-full font-semibold whitespace-normal ${compact ? 'gap-1.5 px-2 py-0.5 text-xs' : 'gap-2 px-3 py-2 text-sm'}`} title={`${origin}: ${status.reasons.join('; ')}`} aria-label={`Ampel: ${appearance.label}. ${origin}. ${status.reasons.join('; ')}`}>
+      <span aria-hidden="true" className={`shrink-0 rounded-full ${compact ? 'size-2' : 'size-3'} ${appearance.dot}`} />
       {appearance.label}{status.origin === 'manual' ? ' · bestätigt' : ''}
     </Badge>
   )

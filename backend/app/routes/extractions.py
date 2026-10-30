@@ -8,7 +8,7 @@ from minio.error import MinioException
 from urllib3.exceptions import HTTPError
 
 from app.dependencies import MinioServiceDep, get_extraction_service
-from app.models.api.extractions import ExtractionRequest
+from app.models.api.extractions import ExtractionRequest, ExtractionResultUpdate
 from app.models.domain.inquiries import InquiryExtractionSnapshot
 from app.models.jobs.extraction import ExtractionJobStatus
 from app.services.jobs.extractions import ExtractionService
@@ -57,3 +57,10 @@ async def get_extraction_result(
     job_id: UUID, service: ServiceDep
 ) -> InquiryExtractionSnapshot:
     return await service.get_result(job_id)
+
+
+@router.patch("/{job_id}/result", operation_id="update_extraction_result")
+async def update_extraction_result(
+    job_id: UUID, request: ExtractionResultUpdate, service: ServiceDep
+) -> InquiryExtractionSnapshot:
+    return await service.update_result(job_id, request)

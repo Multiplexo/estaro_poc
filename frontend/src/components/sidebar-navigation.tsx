@@ -1,6 +1,6 @@
 import { useTranslation } from '@/i18n'
 import { Link } from '@tanstack/react-router'
-import { FolderOpen, Package, Settings, UsersRound } from 'lucide-react'
+import { FolderOpen, Package, UsersRound } from 'lucide-react'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -14,7 +14,6 @@ import { useSidebarNavigation } from '@/hooks/use-sidebar-navigation'
 const managementLinks = [
   { titleKey: 'navigation.customers', to: '/kunden', icon: UsersRound },
   { titleKey: 'navigation.articles', to: '/artikel', icon: Package },
-  { titleKey: 'navigation.settings', to: '/einstellungen', icon: Settings },
 ] as const
 
 export function SidebarNavigation() {
@@ -32,7 +31,7 @@ export function SidebarNavigation() {
                 isActive={pathname === '/' || pathname.startsWith('/anfragen/')}
                 render={<Link to="/" activeOptions={{ exact: true }} onClick={closeMobile} />}
               >
-                <FolderOpen className="size-5!" />
+                <FolderOpen aria-hidden="true" className="size-5!" />
                 <span>{t('navigation.inquiries')}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -50,7 +49,7 @@ export function SidebarNavigation() {
                   isActive={pathname === to}
                   render={<Link to={to} onClick={closeMobile} />}
                 >
-                  <Icon className="size-5!" />
+                  <Icon aria-hidden="true" className="size-5!" />
                   <span>{t(titleKey)}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

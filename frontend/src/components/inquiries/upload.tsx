@@ -1,4 +1,5 @@
 import { lazy, Suspense, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 // Keep the dialog dependencies out of the initial inbox download.
@@ -21,12 +22,12 @@ export function Upload() {
     <>
       <Button
         ref={triggerRef}
-        variant="outline"
+        className="h-10 gap-2 px-4 shadow-xs"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        Upload
+        <Plus aria-hidden="true" className="size-4" />Upload
       </Button>
       {state !== 'idle' ? (
         <Suspense fallback={<p role="status">Upload wird geladen …</p>}>

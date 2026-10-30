@@ -1,6 +1,15 @@
 import type { ApiClient } from './api'
-import type { ExtractedField, ExtractionJobStatus, Inquiry, InquiryExtraction, RequestParams } from './generated/Api'
-import type { AnalysisResponse, ExtractionResult, InquiryOverview, InquiryResponse, JobSummary, VerifiedField } from './inquiry-models'
+import type { ExtractedField, ExtractionJobStatus, ExtractionReview, Inquiry, InquiryExtraction, RequestParams } from './generated/Api'
+import type { AnalysisResponse, ExtractionResult, InquiryOverview, InquiryResponse, InquiryReview, JobSummary, PageInquiryOverview, VerifiedField } from './inquiry-models'
+import { createInquiryEvaluation } from './inquiry-evaluation'
+import { reviewDraft } from './inquiry-review'
+
+export function inquiryReview(review?: ExtractionReview): InquiryReview {
+  return {
+    revision: review?.revision ?? 0,
+    fields: Object.fromEntries(Object.entries(review?.fields ?? {}).map(([id, field]) => [id, { ...field, value: field.value ?? '' }])),
+  }
+}
 
 export function jobSummary(job: ExtractionJobStatus): JobSummary {
   return {
@@ -20,11 +29,12 @@ export function inquiryResponse(inquiry: Inquiry): InquiryResponse {
 }
 
 function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse): ExtractionResult {
+  const documentsById = new Map(inquiry.documents.map((document) => [document.id, document]))
   const field = (value: ExtractedField | undefined): VerifiedField => ({
     value: value?.value ?? null, status: value?.status ?? 'missing', note: value?.note,
     sources: (value?.citations ?? []).map((citation) => ({
       document_id: citation.document_id,
-      filename: inquiry.documents.find((document) => document.id === citation.document_id)?.filename ?? 'Dokument',
+      filename: documentsById.get(citation.document_id)?.filename ?? 'Dokument',
       section_id: citation.section_id, quote: citation.quote,
       page: citation.page_number, start: 0, end: Array.from(citation.quote).length,
       rectangles: citation.bbox && citation.page_width && citation.page_height ? [{
@@ -35,6 +45,7 @@ function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse): 
     })),
   })
   return {
+    review_mode: 'fields',
     customer: field(result.customer), customer_number: field(result.customer_number),
     customer_location: field(result.customer_location), contact_name: field(result.contact_name),
     contact_email: field(result.contact_email), contact_phone: field(result.contact_phone),
@@ -56,6 +67,7 @@ export async function loadAnalysis(api: ApiClient, inquiry: InquiryResponse, par
     job_id: data[0]?.job_id,
     sources: inquiry.documents.map((document) => ({ ...document, sections: [] })),
     extraction: data[0] ? extractionResult(data[0].result, inquiry) : null,
+    review: inquiryReview(data[0]?.review),
   }
 }
 
@@ -69,21 +81,25 @@ export async function loadAll<T>(load: (query: { offset: number; limit: number }
   }
 }
 
-export async function loadInquiryOverviews(api: ApiClient, params: RequestParams = {}): Promise<InquiryOverview[]> {
-  const inquiries = await loadAll((query) => api.inquiries.listInquiries(query, params))
-  const overviews = await Promise.all(inquiries.map(async (inquiry): Promise<InquiryOverview | null> => {
-    const normalized = inquiryResponse(inquiry)
-    const analysis = await loadAnalysis(api, normalized, params)
-    if (!analysis.extraction) return null
+export type InquiryOverviewQuery = NonNullable<Parameters<ApiClient['inquiries']['listInquiryOverviews']>[0]>
+
+export async function loadInquiryOverviews(api: ApiClient, query: InquiryOverviewQuery, params: RequestParams = {}): Promise<PageInquiryOverview> {
+  const { data } = await api.inquiries.listInquiryOverviews(query, params)
+  const items = data.items.map((inquiry): InquiryOverview => {
+    const { latest_extraction: snapshot, ...record } = inquiry
+    const normalized = inquiryResponse(record)
+    const extraction = extractionResult(snapshot.result, normalized)
+    const review = inquiryReview(snapshot.review)
+    const summary = createInquiryEvaluation(extraction).summary(reviewDraft(review))
     return {
-      ...normalized, ...analysis,
+      ...normalized, extraction, review, job_id: snapshot.job_id,
       file_types: [...new Set(normalized.documents.map((document) => document.file_type))],
-      customer_name: analysis.extraction?.customer.value ?? null,
-      email: analysis.extraction?.contact_email?.value ?? null,
+      customer_name: review.fields?.customer?.value ?? extraction.customer.value ?? null,
+      email: review.fields?.contact_email?.value ?? extraction.contact_email?.value ?? null,
       email_received_at: null, subject: null,
-      reference_number: analysis.extraction?.inquiry_number?.value ?? analysis.extraction?.reference_number.value ?? null,
-      review_status: 'new' as const,
+      reference_number: review.fields?.inquiry_number?.value ?? extraction.inquiry_number?.value ?? review.fields?.reference_number?.value ?? extraction.reference_number.value ?? null,
+      review_status: summary.reviewStatus,
     }
-  }))
-  return overviews.filter((inquiry): inquiry is InquiryOverview => inquiry !== null)
+  })
+  return { items, total: data.total }
 }

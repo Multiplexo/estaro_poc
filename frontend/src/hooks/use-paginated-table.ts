@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTable, type PaginationState } from '@tanstack/react-table'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useApi } from '@/hooks/use-api'
 import { dataTableFeatures, type DataTableColumns } from '@/lib/data-table'
 import type { PaginatedResource } from '@/lib/master-data'
@@ -17,11 +17,16 @@ export function usePaginatedTable<T extends { id?: string | number | null }>(
     pageIndex: 0,
     pageSize: 25,
   })
+  const { pageIndex, pageSize } = pagination
+  const selectPage = useCallback((items: T[]) => ({
+    total: items.length,
+    items: items.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize),
+  }), [pageIndex, pageSize])
   const query = useQuery({
     queryKey: [resource.queryKey],
     queryFn: ({ signal }) => loadAll((query) => resource.load(api, query, { signal })),
     staleTime: 60_000,
-    select: (items) => ({ total: items.length, items: items.slice(pagination.pageIndex * pagination.pageSize, (pagination.pageIndex + 1) * pagination.pageSize) }),
+    select: selectPage,
   })
   const table = useTable({
     features: dataTableFeatures,

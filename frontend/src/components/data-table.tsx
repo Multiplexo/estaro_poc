@@ -28,7 +28,7 @@ export function DataTable<T extends { id?: string | number | null }>({ resource,
       <p role="status" className="min-h-5 text-sm text-muted-foreground">
         {query.isFetching ? 'Daten werden geladen …' : null}
       </p>
-      <div className="overflow-hidden rounded-lg border" aria-busy={query.isFetching}>
+      <div className="workspace-panel" aria-busy={query.isFetching}>
         <Table className="table-fixed" style={{ minWidth: tableWidth }}>
           <TableCaption className="sr-only">{caption}</TableCaption>
           <colgroup>

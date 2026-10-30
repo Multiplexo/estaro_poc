@@ -1,4 +1,3 @@
-import { unavailable } from '@/lib/api-capabilities'
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef } from 'react'
 import { useBlocker } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,6 +11,8 @@ import { inquiryTrafficLight } from '@/lib/inquiry-traffic-light'
 import { createReviewState, reviewHasConflict, reviewIsDirty, reviewReducer } from '@/lib/inquiry-review-state'
 import { scrollBehavior } from '@/lib/motion'
 import { useTranslation } from '@/i18n'
+import { useApi } from './use-api'
+import { inquiryReview } from '@/lib/inquiry-api'
 
 function focusField(id: string) {
   requestAnimationFrame(() => {
@@ -23,6 +24,8 @@ function focusField(id: string) {
 
 export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) {
   const { t } = useTranslation()
+  const api = useApi()
+  const matchingAvailable = analysis.extraction?.review_mode !== 'fields'
   const queryClient = useQueryClient()
   const fields = useMemo(() => analysis.extraction ? analysisFields(analysis.extraction) : [], [analysis.extraction])
   const evaluation = useMemo(() => analysis.extraction ? createInquiryEvaluation(analysis.extraction, fields) : undefined, [analysis.extraction, fields])
@@ -35,19 +38,20 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
   const { draft, baseline } = state
   const dirty = useMemo(() => reviewIsDirty({ draft, baseline }), [draft, baseline])
   const conflict = reviewHasConflict(state)
-  const positionStatuses = useMemo(() => analysis.extraction?.items.map((_, index) => evaluation!.positionStatus(draft, index)) ?? [], [analysis.extraction, draft, evaluation])
+  const summary = useMemo(() => evaluation?.summary(draft), [draft, evaluation])
+  const positionStatuses = useMemo(() => summary?.positionStatuses ?? [], [summary])
   const positions = useMemo(() => groups.positions.map((position) => {
     const value = (kind: AnalysisField['kind']) => reviewedField(position.fields.find((entry) => entry.kind === kind)!, draft).value
     const status = positionStatuses[position.index]
     return {
       ...position, article: value('article'), quantity: value('quantity'), unit: value('unit'), status,
-      confirmed: status.origin === 'manual' && position.fields.every((entry) => reviewedField(entry, draft).confirmed),
+      confirmed: position.fields.every((entry) => reviewedField(entry, draft).confirmed) && (!matchingAvailable || status.origin === 'manual'),
       selectedId: draft.article_ids[position.key],
       suggestions: evaluation!.suggestions(draft, position.key),
     }
-  }), [groups.positions, positionStatuses, draft, evaluation])
+  }), [groups.positions, positionStatuses, draft, evaluation, matchingAvailable])
   const customerSuggestions = useMemo(() => evaluation?.suggestions(draft, 'customer') ?? [], [evaluation, draft])
-  const openFields = useMemo(() => fields.filter((entry) => !reviewedField(entry, draft).confirmed), [fields, draft])
+  const openFields = summary?.openFields ?? []
   const defaultValues = useMemo(() => new Map(fields.map((entry) => [entry.id, { value: entry.field.value ?? '', confirmed: false }])), [fields])
   const highlightsByField = useMemo(() => {
     const grouped = new Map<string, Highlight[]>()
@@ -57,7 +61,11 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
   }, [fields, highlights])
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['inquiry-analysis', inquiryId] })
   const mutation = useMutation({
-    mutationFn: async (_submitted: ReviewDraft) => await unavailable<InquiryReview>(),
+    mutationFn: async (submitted: ReviewDraft): Promise<InquiryReview> => {
+      if (!analysis.job_id) throw new Error(t('review.noExtraction'))
+      const { data } = await api.extractions.updateExtractionResult(analysis.job_id, { revision: submitted.revision, fields: submitted.fields })
+      return inquiryReview(data.review)
+    },
     onSuccess: (review, submitted) => {
       void queryClient.invalidateQueries({ queryKey: ['inquiries'] })
       dispatch({ type: 'saved', review, submitted })
@@ -85,9 +93,9 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
   const save = useCallback(() => {
     if (dirty) submit(state.draft)
   }, [dirty, submit, state.draft])
-  const assignmentsComplete = !!draft.customer_id && positions.length > 0 && positions.every((position) => !!position.selectedId)
+  const assignmentsComplete = summary?.assignmentsComplete ?? false
   const complete = () => {
-    if (!assignmentsComplete || conflict || isPending || savePending.current) return
+    if (positions.length === 0 || !assignmentsComplete || conflict || isPending || savePending.current) return
     const submitted = confirmPositions(state.draft, fields)
     dispatch({ type: 'confirmGroup', entries: fields })
     submit(submitted)
@@ -134,14 +142,15 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
     review: fieldValue(entry), onSelect: selectHighlight,
   })
   const openCount = openFields.length
-  const unconfirmedPositions = positionStatuses.filter((status) => status.origin !== 'manual').length
+  const unconfirmedPositions = summary?.unconfirmedPositions ?? 0
   const disabled = isPending || conflict
   const source = useMemo(() => ({ highlights, navigation }), [highlights, navigation])
   return {
     source,
     editor: {
+      matchingAvailable,
       groups: { customerFields: groups.customerFields, inquiryFields: groups.inquiryFields, articleFields },
-      trafficLight: inquiryTrafficLight(positionStatuses),
+      trafficLight: summary?.trafficLight ?? inquiryTrafficLight([]),
       positions, customerId: draft.customer_id, customerSuggestions,
       fields: { onlyOpen: state.onlyOpen, value: fieldValue, view: fieldView },
       fieldCount: fields.length, openCount, unconfirmedPositions, disabled,
@@ -167,9 +176,11 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
       selectArticle: (fieldId: string, id?: string) => dispatch({ type: 'article', fieldId, id }),
     },
     persistence: {
+      matchingAvailable,
       dirty, saving: isPending, error: mutation.error?.message, conflict,
       assignmentsComplete,
-      completed: openCount === 0 && unconfirmedPositions === 0 && assignmentsComplete,
+      canComplete: assignmentsComplete && positions.length > 0 && fields.length > 0,
+      completed: summary?.completed ?? false,
       summary: { openCount, customerAssigned: !!draft.customer_id, assigned: positions.filter((position) => !!position.selectedId).length, total: positions.length },
       canResolveConflict: state.latest.revision > state.baseline.revision && !isPending,
       save, complete,

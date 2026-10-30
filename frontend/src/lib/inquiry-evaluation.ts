@@ -1,14 +1,14 @@
 import i18n from '../i18n'
-import type { ExtractionResult, MatchCandidate } from './inquiry-models'
+import type { ExtractionResult, InquiryOverview, MatchCandidate } from './inquiry-models'
 import { analysisFields, fieldStyles, isCustomerIdentityField, type AnalysisField, type AnalysisResult } from './inquiry-analysis'
 import { positionKey, reviewedField, type ReviewDraft } from './inquiry-review'
-import type { TrafficLight } from './inquiry-traffic-light'
+import { inquiryTrafficLight, type TrafficLight } from './inquiry-traffic-light'
 
 const requiredKinds = new Set(['article', 'material', 'dimensions', 'quantity', 'unit', 'customer'])
 const noCandidates: MatchCandidate[] = []
 const noFields: AnalysisField[] = []
 
-export function createInquiryEvaluation(result: AnalysisResult & Pick<ExtractionResult, 'customer_match' | 'matching'>, fields = analysisFields(result)) {
+export function createInquiryEvaluation(result: AnalysisResult & Pick<ExtractionResult, 'customer_match' | 'matching' | 'review_mode'>, fields = analysisFields(result)) {
   const sharedFields: AnalysisField[] = []
   const customerFields: AnalysisField[] = []
   const positions = new Map<string, AnalysisField[]>()
@@ -34,7 +34,7 @@ export function createInquiryEvaluation(result: AnalysisResult & Pick<Extraction
     return selectedId ? candidates.find((candidate) => candidate.id === selectedId) : candidates.length === 1 ? candidates[0] : undefined
   }
 
-  return {
+  const evaluation = {
     suggestions(review: ReviewDraft, targetId: string): MatchCandidate[] {
       if (targetId === 'customer' ? changed(customerFields, review)
         : changed(sharedFields, review) || changed(fieldsFor(targetId), review)) return noCandidates
@@ -43,7 +43,10 @@ export function createInquiryEvaluation(result: AnalysisResult & Pick<Extraction
     positionStatus(review: ReviewDraft, index: number): TrafficLight {
       const key = `item-${index}-article`
       const confirmation = review.position_confirmations[key]
-      if (confirmation) return { color: 'green', origin: 'manual', reasons: [i18n.t('traffic.manualReason')], confirmedAt: confirmation.confirmed_at }
+      if (result.review_mode === 'fields' && fieldsFor(key).length > 0 && [...sharedFields, ...fieldsFor(key)].every((entry) => reviewedField(entry, review).confirmed)) {
+        return { color: 'green', origin: 'manual', reasons: [i18n.t('traffic.manualReason')], confirmedAt: null }
+      }
+      if (result.review_mode !== 'fields' && confirmation) return { color: 'green', origin: 'manual', reasons: [i18n.t('traffic.manualReason')], confirmedAt: confirmation.confirmed_at }
 
       const conflicts: string[] = []
       const open: string[] = []
@@ -60,6 +63,7 @@ export function createInquiryEvaluation(result: AnalysisResult & Pick<Extraction
         ['customer', review.customer_id, i18n.t('fields.customer')],
         [key, review.article_ids[key], i18n.t('fields.article')],
       ] as const) {
+        if (result.review_mode === 'fields') continue
         const candidate = candidateFor(targetKey, selectedId)
         if (candidate?.status === 'different') conflicts.push(...(candidate.reasons?.length ? candidate.reasons : [i18n.t('traffic.masterDifference', { label })]))
         else if (candidate?.status !== 'matching') {
@@ -71,6 +75,24 @@ export function createInquiryEvaluation(result: AnalysisResult & Pick<Extraction
       if (conflicts.length) return { color: 'red', origin: 'system', reasons: [...new Set(conflicts)] }
       if (open.length) return { color: 'yellow', origin: 'system', reasons: [...new Set(open)] }
       return { color: 'green', origin: 'system', reasons: [i18n.t('traffic.complete')] }
+    },
+  }
+  return {
+    ...evaluation,
+    summary(review: ReviewDraft) {
+      const positionStatuses = result.items.map((_, index) => evaluation.positionStatus(review, index))
+      const openFields = fields.filter((entry) => !reviewedField(entry, review).confirmed)
+      const confirmedPositions = positionStatuses.filter((status) => status.origin === 'manual').length
+      const assignmentsComplete = result.review_mode === 'fields' || (!!review.customer_id && result.items.length > 0 &&
+        result.items.every((_, index) => !!review.article_ids[`item-${index}-article`]))
+      const completed = result.items.length > 0 && fields.length > 0 && openFields.length === 0 &&
+        confirmedPositions === result.items.length && assignmentsComplete
+      const reviewStatus: InquiryOverview['review_status'] = completed ? 'reviewed' : review.revision > 0 ? 'in_review' : 'new'
+      return {
+        positionStatuses, openFields, confirmedPositions, assignmentsComplete, completed, reviewStatus,
+        unconfirmedPositions: positionStatuses.length - confirmedPositions,
+        trafficLight: inquiryTrafficLight(positionStatuses),
+      }
     },
   }
 }

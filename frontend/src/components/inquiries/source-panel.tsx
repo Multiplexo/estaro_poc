@@ -6,12 +6,12 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
 import { useDocumentDownload } from '@/hooks/use-document-download'
 import type { SourceNavigation } from '@/hooks/use-source-navigation'
-import type { ReadingSource } from '@/lib/inquiry-models'
+import type { ReadingPage, ReadingSource } from '@/lib/inquiry-models'
 import type { Highlight } from '@/lib/inquiry-analysis'
 import { EmailSource } from './email-source'
 
 const PdfSource = lazy(() => import('./pdf-source'))
-
+const noPages: ReadingPage[] = []
 
 export const SourcePanel = memo(function SourcePanel({ inquiryId, sources, highlights, navigation }: {
   inquiryId: string; sources: ReadingSource[]; highlights: Highlight[]; navigation: SourceNavigation
@@ -22,7 +22,7 @@ export const SourcePanel = memo(function SourcePanel({ inquiryId, sources, highl
   const sourceId = source?.id
   const sourceHighlights = useMemo(() => highlights.filter((highlight) => highlight.source.document_id === sourceId), [highlights, sourceId])
   if (!source) return <p className="text-sm text-muted-foreground">{t('source.notReady')}</p>
-  return <section aria-label={t('source.original')} className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border bg-background">
+  return <section aria-label={t('source.original')} className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border bg-card">
     <header className="flex min-h-12 shrink-0 items-center gap-2 border-b px-3 py-1.5">
       {source.file_type === 'pdf' ? <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
       {sources.length > 1 ? <NativeSelect aria-label={t('source.chooseFile')} title={source.filename} value={source.id} onChange={(event) => selectDocument(event.target.value)} className="min-w-0 flex-1 [&_select]:truncate [&_select]:border-transparent [&_select]:text-sm">
@@ -36,7 +36,7 @@ export const SourcePanel = memo(function SourcePanel({ inquiryId, sources, highl
     {download.error ? <p role="alert" className="px-3 py-2 text-xs text-destructive">{download.error}</p> : null}
     <div data-source-scroll role="region" aria-label={t('source.documentRegion')} tabIndex={0} className="max-h-[75dvh] min-h-64 flex-1 overflow-auto bg-muted/40 p-3 focus-visible:outline-2 focus-visible:outline-blue-600 lg:max-h-none lg:min-h-0">
       {source.file_type === 'pdf' ? <Suspense fallback={<p role="status">{t('source.loadingPdf')}</p>}>
-        <PdfSource key={source.id} inquiryId={inquiryId} documentId={source.id} pages={source.pages ?? []}
+        <PdfSource key={source.id} inquiryId={inquiryId} documentId={source.id} pages={source.pages ?? noPages}
           highlights={sourceHighlights} active={active} scrollKey={scrollKey} onSelect={selectHighlight} />
       </Suspense> : <EmailSource key={source.id} source={source} highlights={sourceHighlights} active={active} scrollKey={scrollKey} onSelect={selectHighlight} />}
     </div>

@@ -8,9 +8,10 @@ from fastapi.concurrency import run_in_threadpool
 from kombu.exceptions import OperationalError
 from redis.exceptions import RedisError
 
-from app.models.api.extractions import ExtractionRequest
+from app.models.api.extractions import ExtractionRequest, ExtractionResultUpdate
+from app.models.domain.extraction_review import ExtractionReviewConflict
 from app.models.domain.inquiries import InquiryExtractionSnapshot
-from app.models.jobs.extraction import ExtractionJobStatus
+from app.models.jobs.extraction import ExtractedField, ExtractionJobStatus
 from app.persistence.jobs.extractions.extraction_repository import ExtractionRepository
 from app.workers.celery_app import celery_app
 
@@ -61,4 +62,48 @@ class ExtractionService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Extraction result not found",
             )
+        return result
+
+    async def update_result(
+        self, job_id: UUID, request: ExtractionResultUpdate
+    ) -> InquiryExtractionSnapshot:
+        snapshot = await self.get_result(job_id)
+        field_ids = {
+            name
+            for name in type(snapshot.result).model_fields
+            if isinstance(getattr(snapshot.result, name), ExtractedField)
+        }
+        field_ids.update(
+            f"item-{index}-{name}"
+            for index, item in enumerate(snapshot.result.items)
+            for name in type(item).model_fields
+        )
+        unknown_fields = request.fields.keys() - field_ids
+        if unknown_fields:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "message": "Unknown extraction fields",
+                    "fields": sorted(unknown_fields),
+                },
+            )
+
+        try:
+            result = await self.repository.update_result(job_id, request)
+        except ExtractionReviewConflict as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Extraction review has changed; reload before saving",
+            ) from exc
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Extraction result not found",
+            )
+        logger.info(
+            "extraction_result_updated",
+            job_id=str(job_id),
+            revision=result.review.revision,
+            field_count=len(request.fields),
+        )
         return result

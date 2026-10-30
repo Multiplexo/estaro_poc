@@ -115,6 +115,8 @@
     "completed": "Prüfung abgeschlossen",
     "saved": "Alle Änderungen gespeichert",
     "summary": "{{count}} Angaben offen · {{customer}} · {{assigned}}/{{total}} Artikel zugeordnet",
+    "openFields_one": "{{count}} Angabe offen",
+    "openFields_other": "{{count}} Angaben offen",
     "customerAssigned": "Kunde zugeordnet",
     "assignCustomer": "Kunde zuordnen",
     "save": "Zwischenstand speichern",

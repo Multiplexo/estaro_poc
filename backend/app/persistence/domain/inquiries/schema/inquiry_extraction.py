@@ -29,6 +29,7 @@ class InquiryExtraction(SQLModel, table=True):
     model: str = Field(max_length=200)
     prompt_version: str = Field(max_length=100)
     result: dict[str, Any] = Field(sa_type=JSONB)
+    review: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
 
     def to_model(self) -> InquiryExtractionSnapshot:
         return InquiryExtractionSnapshot.model_validate(self)

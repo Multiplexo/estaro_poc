@@ -12,7 +12,12 @@ from urllib3.exceptions import HTTPError
 
 from app.dependencies import MinioServiceDep, get_inquiry_repository
 from app.models.api.documents import DocumentUrl
-from app.models.domain.inquiries import Inquiry, InquiryExtractionSnapshot
+from app.models.domain.inquiries import (
+    Inquiry,
+    InquiryExtractionSnapshot,
+    InquiryOverviewPage,
+    InquiryOverviewQuery,
+)
 from app.models.shared.pagination import Pagination
 from app.persistence.domain.inquiries.inquiry_repository import InquiryRepository
 
@@ -30,6 +35,14 @@ async def list_inquiries(
     return await repository.list_inquiries(
         offset=pagination.offset, limit=pagination.limit
     )
+
+
+@router.get("/overview", operation_id="list_inquiry_overviews")
+async def list_inquiry_overviews(
+    repository: RepositoryDep,
+    query: Annotated[InquiryOverviewQuery, Depends()],
+) -> InquiryOverviewPage:
+    return await repository.list_overviews(query)
 
 
 @router.get("/{inquiry_id}", response_model=Inquiry, operation_id="get_inquiry_by_id")

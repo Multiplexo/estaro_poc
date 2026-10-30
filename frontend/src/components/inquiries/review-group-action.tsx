@@ -4,5 +4,5 @@ import { Button } from '@/components/ui/button'
 
 export function ReviewGroupAction({ confirmed, disabled, onConfirm, label }: { confirmed: boolean; disabled: boolean; onConfirm: () => void; label: string }) {
   const { t } = useTranslation()
-  return <Button variant={confirmed ? 'ghost' : 'outline'} className={`h-auto min-h-10 whitespace-normal ${confirmed ? 'text-blue-700' : ''}`} aria-label={confirmed ? t('review.groupChecked', { label }) : t('review.confirmGroup', { label })} disabled={disabled || confirmed} onClick={onConfirm}><Check aria-hidden="true" />{confirmed ? t('common.checked') : t('review.confirmAllInSection')}</Button>
+  return <Button size="sm" variant={confirmed ? 'ghost' : 'outline'} aria-label={confirmed ? t('review.groupChecked', { label }) : t('review.confirmGroup', { label })} disabled={disabled || confirmed} onClick={onConfirm}><Check aria-hidden="true" />{confirmed ? t('common.checked') : t('review.confirmAllInSection')}</Button>
 }

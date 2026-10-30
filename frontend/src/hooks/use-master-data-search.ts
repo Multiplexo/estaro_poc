@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useApi } from './use-api'
 import type { ApiClient } from '@/lib/api'
@@ -28,20 +28,24 @@ export function useMasterDataSearch(kind: MasterDataKind, initialSearch: string)
     const timer = window.setTimeout(() => setTerm(search.trim()), 250)
     return () => window.clearTimeout(timer)
   }, [search])
+  const selectResults = useCallback((items: MasterDataCandidate[]) => {
+    const text = term.toLocaleLowerCase('de-DE')
+    return items.filter((item) => Object.values(item).some((value) =>
+      typeof value === 'string' && value.toLocaleLowerCase('de-DE').includes(text)))
+  }, [term])
   const results = useQuery({
-    queryKey: ['master-data-search', kind, term, offset],
-    queryFn: async ({ signal }) => {
-      const items = await loadAll<MasterDataCandidate>((params) => kind === 'customers'
-        ? api.customers.listCustomers(params, { signal })
-        : api.articles.listArticles(params, { signal }))
-      const filtered = items.filter((item) => Object.values(item).some((value) =>
-        typeof value === 'string' && value.toLocaleLowerCase('de-DE').includes(term.toLocaleLowerCase('de-DE'))))
-      return { items: filtered.slice(offset, offset + candidatePageSize), total: filtered.length }
-    },
-    enabled: term === search.trim(),
+    queryKey: [kind],
+    queryFn: ({ signal }) => loadAll<MasterDataCandidate>((params) => kind === 'customers'
+      ? api.customers.listCustomers(params, { signal })
+      : api.articles.listArticles(params, { signal })),
+    staleTime: 60_000,
+    select: selectResults,
   })
+  const data = useMemo(() => results.data ? {
+    items: results.data.slice(offset, offset + candidatePageSize), total: results.data.length,
+  } : undefined, [results.data, offset])
   return {
     search, setSearch: (value: string) => { setSearch(value); setOffset(0) },
-    results, offset, setOffset, waiting: term !== search.trim(),
+    results: { ...results, data }, offset, setOffset, waiting: term !== search.trim(),
   }
 }

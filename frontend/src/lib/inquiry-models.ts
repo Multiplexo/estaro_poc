@@ -55,6 +55,7 @@ export interface MatchingResult {
   targets?: { field_id: string; candidates?: MatchCandidate[] }[]
 }
 export interface ExtractionResult {
+  review_mode?: 'fields'
   customer: VerifiedField
   customer_number?: VerifiedField
   customer_location?: VerifiedField

@@ -523,6 +523,31 @@ export interface ExtractionJobStatus {
   finished_at: string | null;
 }
 
+/** ExtractionResultUpdate */
+export interface ExtractionResultUpdate {
+  /**
+   * Revision
+   * @min 0
+   */
+  revision: number;
+  /** Fields */
+  fields: Record<string, ReviewedField>;
+}
+
+/** ExtractionReview */
+export interface ExtractionReview {
+  /**
+   * Revision
+   * @min 0
+   * @default 0
+   */
+  revision?: number;
+  /** Fields */
+  fields?: Record<string, ReviewedField>;
+  /** Updated At */
+  updated_at?: string | null;
+}
+
 /** HTTPValidationError */
 export interface HTTPValidationError {
   /** Detail */
@@ -657,6 +682,52 @@ export interface InquiryExtractionSnapshot {
   prompt_version: string;
   /** Eingehende ESTARO-Anfrage mit wörtlichen Belegen für jedes extrahierte Feld. */
   result: InquiryExtraction;
+  review?: ExtractionReview;
+}
+
+/** InquiryOverview */
+export interface InquiryOverview {
+  /**
+   * Id
+   * The inquiry's UUID.
+   * @format uuid
+   */
+  id?: string;
+  /**
+   * Created At
+   * When the inquiry was created.
+   * @format date-time
+   */
+  created_at: string;
+  /**
+   * Deletion Requested At
+   * When deletion was requested, if any.
+   */
+  deletion_requested_at?: string | null;
+  /**
+   * Deletion Retry At
+   * When to retry deletion, if scheduled.
+   */
+  deletion_retry_at?: string | null;
+  /** Documents */
+  documents?: InquiryDocument[];
+  latest_extraction: InquiryExtractionSnapshot;
+}
+
+/** InquiryOverviewPage */
+export interface InquiryOverviewPage {
+  /** Items */
+  items: InquiryOverview[];
+  /** Total */
+  total: number;
+}
+
+/** ReviewedField */
+export interface ReviewedField {
+  /** Value */
+  value: string | null;
+  /** Confirmed */
+  confirmed: boolean;
 }
 
 /**
@@ -1019,6 +1090,56 @@ export class Api<
       }),
 
     /**
+     * No description
+     *
+     * @tags inquiries
+     * @name ListInquiryOverviews
+     * @summary List Inquiry Overviews
+     * @request GET:/inquiries/overview
+     */
+    listInquiryOverviews: (
+      query?: {
+        /**
+         * Offset
+         * @min 0
+         * @default 0
+         */
+        offset?: number;
+        /**
+         * Limit
+         * @min 1
+         * @max 1000
+         * @default 100
+         */
+        limit?: number;
+        /**
+         * Search
+         * @maxLength 1000
+         * @default ""
+         */
+        search?: string;
+        /**
+         * Sort
+         * @default "newest"
+         */
+        sort?: "newest" | "oldest" | "customer";
+        /**
+         * Status
+         * @default "all"
+         */
+        status?: "all" | "new" | "in_review" | "reviewed";
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<InquiryOverviewPage, HTTPValidationError>({
+        path: `/inquiries/overview`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
      * @description Return an inquiry by ID.
      *
      * @tags inquiries
@@ -1170,6 +1291,28 @@ export class Api<
       this.request<InquiryExtractionSnapshot, HTTPValidationError>({
         path: `/extractions/${jobId}/result`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags extractions
+     * @name UpdateExtractionResult
+     * @summary Update Extraction Result
+     * @request PATCH:/extractions/{job_id}/result
+     */
+    updateExtractionResult: (
+      jobId: string,
+      data: ExtractionResultUpdate,
+      params: RequestParams = {},
+    ) =>
+      this.request<InquiryExtractionSnapshot, HTTPValidationError>({
+        path: `/extractions/${jobId}/result`,
+        method: "PATCH",
+        body: data,
+        type: "application/json",
         format: "json",
         ...params,
       }),

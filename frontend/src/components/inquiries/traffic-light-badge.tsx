@@ -13,11 +13,11 @@ export function TrafficLightBadge({ status, label, prominent = false, showDetail
   const appearance = appearances[status.color]
   const provenance = status.origin === 'manual' ? t('traffic.manual') : t('traffic.system')
   const timestamp = status.confirmedAt ? new Intl.DateTimeFormat(i18n.resolvedLanguage, { dateStyle: 'short', timeStyle: 'medium' }).format(new Date(status.confirmedAt)) : undefined
-  return <div className={prominent ? `flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border-2 p-3 ${appearance.style}` : 'space-y-2 text-sm'} role="status" aria-atomic="true">
-    {prominent ? <p className="text-sm font-semibold">{t('traffic.heading')}</p> : null}
-    <Badge variant="outline" className={`${appearance.style} h-auto max-w-full gap-2 whitespace-normal text-left ${prominent ? 'justify-start rounded-none border-0 bg-transparent p-0 text-lg font-semibold' : 'px-3 py-2 text-sm font-semibold'}`} aria-label={t('traffic.label', { label: label ?? t('traffic.position'), color: t(appearance.labelKey), origin: provenance })}>
-      <span aria-hidden="true" className={`${prominent ? 'size-5' : 'size-3'} shrink-0 rounded-full ${appearance.dot}`} /><span>{t(appearance.labelKey)} · {provenance}</span>
+  return <div className={prominent ? `flex flex-col items-start gap-2 rounded-lg border p-3 ${appearance.style}` : 'space-y-2 text-sm'} role="status" aria-atomic="true">
+    {prominent ? <p className="w-full text-xs font-medium">{t('traffic.heading')}</p> : null}
+    <Badge variant="outline" className={`${appearance.style} h-auto max-w-full gap-2 whitespace-normal text-left ${prominent ? 'justify-start rounded-none border-0 bg-transparent p-0 text-sm font-semibold' : 'px-3 py-2 text-sm font-semibold'}`} aria-label={t('traffic.label', { label: label ?? t('traffic.position'), color: t(appearance.labelKey), origin: provenance })}>
+      <span aria-hidden="true" className={`size-3 shrink-0 rounded-full ${appearance.dot}`} /><span>{t(appearance.labelKey)} · {provenance}</span>
     </Badge>
-    {showDetails ? <div className="w-full text-sm">{status.origin === 'manual' ? <p>{timestamp ? t('traffic.confirmedAt', { time: timestamp }) : t('traffic.notSaved')}</p> : <ul className="list-inside list-disc">{status.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}</div> : null}
+    {showDetails ? <div className={`w-full ${prominent ? 'text-xs leading-relaxed' : 'text-sm'}`}>{status.origin === 'manual' ? <p>{timestamp ? t('traffic.confirmedAt', { time: timestamp }) : t('traffic.notSaved')}</p> : <ul className="list-inside list-disc">{status.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}</div> : null}
   </div>
 }

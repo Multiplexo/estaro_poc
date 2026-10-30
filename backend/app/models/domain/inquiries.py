@@ -2,11 +2,14 @@
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.domain.extraction_review import ExtractionReview
 from app.models.jobs.extraction import InquiryExtraction
+from app.models.shared.pagination import Pagination
 
 
 class FileType(StrEnum):
@@ -67,3 +70,19 @@ class InquiryExtractionSnapshot(BaseModel):
     model: str
     prompt_version: str
     result: InquiryExtraction
+    review: ExtractionReview = Field(default_factory=ExtractionReview)
+
+
+class InquiryOverviewQuery(Pagination):
+    search: str = Field(default="", max_length=1000)
+    sort: Literal["newest", "oldest", "customer"] = "newest"
+    status: Literal["all", "new", "in_review", "reviewed"] = "all"
+
+
+class InquiryOverview(Inquiry):
+    latest_extraction: InquiryExtractionSnapshot
+
+
+class InquiryOverviewPage(BaseModel):
+    items: list[InquiryOverview]
+    total: int

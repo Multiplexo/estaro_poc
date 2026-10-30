@@ -8,7 +8,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.api.extractions import ExtractionRequest
+from app.models.api.extractions import ExtractionRequest, ExtractionResultUpdate
+from app.models.domain.extraction_review import (
+    ExtractionReview,
+    ExtractionReviewConflict,
+)
 from app.models.domain.inquiries import FileType, InquiryExtractionSnapshot
 from app.models.jobs.extraction import (
     INQUIRY_EXTRACTION_SCHEMA_VERSION,
@@ -64,6 +68,41 @@ class ExtractionRepository:
             return record.to_model() if record is not None else None
         except SQLAlchemyError:
             logger.exception("extraction_result_get_failed", job_id=str(job_id))
+            raise
+
+    async def update_result(
+        self, job_id: UUID, request: ExtractionResultUpdate
+    ) -> InquiryExtractionSnapshot | None:
+        try:
+            statement = (
+                select(ExtractionSchema)
+                .where(ExtractionSchema.job_id == job_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            record = (await self.session.exec(statement)).one_or_none()
+            if record is None:
+                await self.session.rollback()
+                return None
+            review = ExtractionReview.model_validate(record.review)
+            if request.revision != review.revision:
+                raise ExtractionReviewConflict("Extraction review has changed")
+
+            record.review = ExtractionReview(
+                revision=review.revision + 1,
+                fields={**review.fields, **request.fields},
+                updated_at=datetime.now(UTC),
+            ).model_dump(mode="json")
+            self.session.add(record)
+            response = record.to_model()
+            await self.session.commit()
+            return response
+        except ExtractionReviewConflict:
+            await self.session.rollback()
+            raise
+        except SQLAlchemyError:
+            await self.session.rollback()
+            logger.exception("extraction_result_update_failed", job_id=str(job_id))
             raise
 
     async def complete(

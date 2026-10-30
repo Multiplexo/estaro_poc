@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { InquiryDetailsCard } from '@/components/inquiries/inquiry-details-card'
+import { InquiryPositions } from '@/components/inquiries/inquiry-positions'
 import { InquiryDetailSidebar } from '@/components/inquiries/inquiry-detail-sidebar'
 import { InquiryEmailCard } from '@/components/inquiries/inquiry-email-card'
 import { InquiryFilesCard } from '@/components/inquiries/inquiry-files-card'
@@ -16,15 +17,16 @@ function InquiryOverviewPage() {
   return (
     <div className="space-y-5">
       <Link to="/" className="inline-flex min-h-10 items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeftIcon aria-hidden="true" className="size-4" />Alle Anfragen</Link>
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="page-heading">
         <div className="min-w-0 flex-1 basis-72">
-          <p className="mb-1 text-sm text-muted-foreground">Anfrageübersicht</p>
-          <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">{detail?.title ?? 'Anfrage'}</h1>
+          <p className="page-eyebrow">Anfrageübersicht</p>
+          <h1 className="text-3xl font-semibold tracking-tight [overflow-wrap:anywhere]">{detail?.customerName || detail?.title || 'Anfrage'}</h1>
+          {detail?.customerName && detail.title !== detail.customerName ? <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{detail.title}</p> : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {inquiry.data ? <InquiryDetailActions inquiry={inquiry.data} /> : null}
           {detail ? <Button className="min-h-11 px-4" render={<Link to="/anfragen/$inquiryId/pruefung" params={{ inquiryId }} />}>
-            Extraktion ansehen<ArrowRightIcon aria-hidden="true" />
+            Extraktion prüfen<ArrowRightIcon aria-hidden="true" />
           </Button> : null}
         </div>
       </header>
@@ -33,16 +35,25 @@ function InquiryOverviewPage() {
         <Button variant="outline" disabled={inquiry.isFetching || analysis.isFetching} onClick={() => { void inquiry.refetch(); void analysis.refetch() }}>Erneut versuchen</Button>
       </div> : null}
       {inquiry.isPending || analysis.isPending ? <p role="status" className="text-sm text-muted-foreground">Anfrage wird geladen …</p> : null}
-      {detail && inquiry.data ? <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
+      {detail && inquiry.data ? <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_23rem]">
+        <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
         <div className="@container min-w-0 space-y-5">
           {detail.extractionNotice ? <p role="status" className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">{detail.extractionNotice}</p> : null}
           <InquiryDetailsCard detail={detail} />
+        </div>
+        <div className="@container order-2 min-w-0">
+          <InquiryPositions detail={detail} />
+        </div>
+        <div className="@container order-3 min-w-0">
           <div className="grid min-w-0 items-start gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <InquiryEmailCard emails={detail.emails} />
             <InquiryFilesCard inquiry={inquiry.data} />
           </div>
         </div>
-        <InquiryDetailSidebar inquiry={inquiry.data} detail={detail} customer={customer.data} customerLoading={customer.isFetching && !customer.data} customerError={customer.error?.message} />
+        </div>
+        <div className="order-1 min-w-0">
+          <InquiryDetailSidebar inquiry={inquiry.data} detail={detail} customer={customer.data} customerLoading={customer.isFetching && !customer.data} customerError={customer.error?.message} />
+        </div>
       </div> : null}
     </div>
   )

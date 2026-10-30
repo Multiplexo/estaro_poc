@@ -1,4 +1,4 @@
-import type { AnalysisResponse, InquiryOverview, InquiryResponse, ReadingSource } from './inquiry-models'
+import type { AnalysisResponse, InquiryResponse, ReadingSource } from './inquiry-models'
 import { analysisFields, customerIdentityKinds, itemFieldKinds } from './inquiry-analysis'
 import { reviewDraft, reviewedField } from './inquiry-review'
 import { inquiryTrafficLight } from './inquiry-traffic-light'
@@ -28,16 +28,14 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
   const review = reviewDraft(analysis.review)
   const fields = result ? analysisFields(result) : []
   const evaluation = result ? createInquiryEvaluation(result, fields) : undefined
+  const summary = evaluation?.summary(review)
   const values = new Map(fields.map((entry) => [entry.id, reviewedField(entry, review).value]))
   const value = (id: string) => values.get(id)?.trim() || null
   const positions = result?.items.map((_, index) => ({
     number: index + 1,
     fields: itemFieldKinds.map((kind) => ({ kind, value: value(`item-${index}-${kind}`) })),
-    status: evaluation!.positionStatus(review, index),
+    status: summary!.positionStatuses[index],
   })) ?? []
-  const confirmedPositions = positions.filter((position) => position.status.origin === 'manual').length
-  const reviewStatus: InquiryOverview['review_status'] = positions.length > 0 && confirmedPositions === positions.length ? 'reviewed'
-    : review.revision > 0 ? 'in_review' : 'new'
   const customerUnchanged = customerIdentityKinds.every((kind) => value(kind) === (result?.[kind]?.value?.trim() || null))
   const suggestions = customerUnchanged ? result?.customer_match : undefined
   const matchingCustomers = customerUnchanged ? result?.matching?.targets?.find((target) => target.field_id === 'customer')?.candidates ?? [] : []
@@ -51,11 +49,11 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
     offerValidUntil: value('offer_valid_until'), deliveryDate: value('delivery_date'), requirements: value('requirements'),
     customerNumber: value('customer_number'), customerLocation: value('customer_location'),
     contactName: value('contact_name'), contactEmail: value('contact_email'), contactPhone: value('contact_phone'),
-    reviewStatus, positions, confirmedPositions,
+    reviewStatus: summary?.reviewStatus ?? 'new', positions, confirmedPositions: summary?.confirmedPositions ?? 0,
     extractionNotice: extractionNotice(inquiry, analysis), matchingStatus: result?.matching?.status,
-    openFields: fields.filter((entry) => !reviewedField(entry, review).confirmed).length,
+    openFields: summary?.openFields.length ?? 0,
     fieldCount: fields.length,
-    trafficLight: inquiryTrafficLight(positions.map((position) => position.status)),
+    trafficLight: summary?.trafficLight ?? inquiryTrafficLight([]),
   }
 }
 

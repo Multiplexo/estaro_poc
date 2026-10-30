@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArtikelRouteImport } from './routes/artikel'
-import { Route as EinstellungenRouteImport } from './routes/einstellungen'
 import { Route as KundenRouteImport } from './routes/kunden'
 import { Route as TableRouteImport } from './routes/table'
 import { Route as AnfragenInquiryIdRouteImport } from './routes/anfragen.$inquiryId'
@@ -25,11 +24,6 @@ const IndexRoute = IndexRouteImport.update({
 const ArtikelRoute = ArtikelRouteImport.update({
   id: '/artikel',
   path: '/artikel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EinstellungenRoute = EinstellungenRouteImport.update({
-  id: '/einstellungen',
-  path: '/einstellungen',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KundenRoute = KundenRouteImport.update({
@@ -57,7 +51,6 @@ const AnfragenInquiryIdPruefungRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/artikel': typeof ArtikelRoute
-  '/einstellungen': typeof EinstellungenRoute
   '/kunden': typeof KundenRoute
   '/table': typeof TableRoute
   '/anfragen/$inquiryId': typeof AnfragenInquiryIdRoute
@@ -66,7 +59,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/artikel': typeof ArtikelRoute
-  '/einstellungen': typeof EinstellungenRoute
   '/kunden': typeof KundenRoute
   '/table': typeof TableRoute
   '/anfragen/$inquiryId': typeof AnfragenInquiryIdRoute
@@ -76,7 +68,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/artikel': typeof ArtikelRoute
-  '/einstellungen': typeof EinstellungenRoute
   '/kunden': typeof KundenRoute
   '/table': typeof TableRoute
   '/anfragen/$inquiryId': typeof AnfragenInquiryIdRoute
@@ -87,7 +78,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/artikel'
-    | '/einstellungen'
     | '/kunden'
     | '/table'
     | '/anfragen/$inquiryId'
@@ -96,7 +86,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/artikel'
-    | '/einstellungen'
     | '/kunden'
     | '/table'
     | '/anfragen/$inquiryId'
@@ -105,7 +94,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/artikel'
-    | '/einstellungen'
     | '/kunden'
     | '/table'
     | '/anfragen/$inquiryId'
@@ -115,7 +103,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArtikelRoute: typeof ArtikelRoute
-  EinstellungenRoute: typeof EinstellungenRoute
   KundenRoute: typeof KundenRoute
   TableRoute: typeof TableRoute
   AnfragenInquiryIdRoute: typeof AnfragenInquiryIdRoute
@@ -136,13 +123,6 @@ declare module '@tanstack/react-router' {
       path: '/artikel'
       fullPath: '/artikel'
       preLoaderRoute: typeof ArtikelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/einstellungen': {
-      id: '/einstellungen'
-      path: '/einstellungen'
-      fullPath: '/einstellungen'
-      preLoaderRoute: typeof EinstellungenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kunden': {
@@ -179,7 +159,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArtikelRoute: ArtikelRoute,
-  EinstellungenRoute: EinstellungenRoute,
   KundenRoute: KundenRoute,
   TableRoute: TableRoute,
   AnfragenInquiryIdRoute: AnfragenInquiryIdRoute,

@@ -11,13 +11,14 @@ export function inquiryOverview(inquiry: InquiryOverview) {
   const result = inquiry.extraction
   const fields = result ? analysisFields(result) : []
   const evaluation = result ? createInquiryEvaluation(result, fields) : undefined
-  const positions = result?.items.map((_, index) => evaluation!.positionStatus(review, index)) ?? []
+  const summary = evaluation?.summary(review)
   const delivery = review.fields.delivery_date?.value ?? result?.delivery_date?.value
   return {
     ...inquiry,
     title: inquiry.customer_name?.trim() || 'Kunde nicht erkannt',
     description: inquiry.subject || inquiry.reference_number || inquiry.documents.find((document) => !document.parent_document_id)?.filename || 'Anfrage',
-    trafficLight: inquiryTrafficLight(positions),
+    review_status: summary?.reviewStatus ?? 'new',
+    trafficLight: summary?.trafficLight ?? inquiryTrafficLight([]),
     deliveryDate: delivery?.trim() || null,
   }
 }
