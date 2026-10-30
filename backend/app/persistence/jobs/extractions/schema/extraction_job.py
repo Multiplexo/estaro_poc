@@ -19,6 +19,12 @@ class ExtractionJob(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     source_key: str | None = Field(default=None, max_length=1024)
+    inquiry_id: UUID | None = Field(
+        default=None, foreign_key="inquiry.id", ondelete="CASCADE", index=True
+    )
+    document_id: UUID | None = Field(
+        default=None, foreign_key="inquiry_document.id", ondelete="CASCADE", index=True
+    )
     status: ExtractionStatus = Field(
         default=ExtractionStatus.QUEUED,
         sa_type=Enum(

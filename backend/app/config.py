@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
 
     MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_PUBLIC_ENDPOINT: str | None = None
+    MINIO_PUBLIC_SECURE: bool | None = None
+    MINIO_REGION: str = "us-east-1"
     MINIO_ACCESS_KEY: str = "estaro-admin"
     MINIO_SECRET_KEY: str = ""
     MINIO_BUCKET: str = "inquiries"

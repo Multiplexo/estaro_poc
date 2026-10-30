@@ -3,11 +3,12 @@
 from collections.abc import AsyncIterator
 
 import structlog
-from app.config import get_settings
 from sqlalchemy import URL
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.config import get_settings
 
 logger = structlog.get_logger(__name__)
 

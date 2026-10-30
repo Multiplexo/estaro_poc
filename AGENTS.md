@@ -56,8 +56,6 @@
 
 ## 10 Commandments for This Project
 
-1. All routes must have rate limiting decorators
-2. All LLM operations must have Langfuse tracing
 3. All async operations must have proper error handling
 4. All logs must follow structured logging format with lowercase_underscore event names
 5. All retries must use tenacity library
@@ -71,8 +69,6 @@
 
 - ❌ Using f-strings in structlog events
 - ❌ Adding imports inside functions
-- ❌ Forgetting rate limiting decorators on routes
-- ❌ Missing Langfuse tracing on LLM calls
 - ❌ Caching error responses
 - ❌ Using `logger.error()` instead of `logger.exception()` for exceptions
 - ❌ Blocking I/O operations without async
@@ -94,6 +90,3 @@ Before modifying code:
 ## Rules 
 - only add tests if asked
 - only documentation if asked
-
-## References
-- Langfuse Documentation: https://langfuse.com/docs

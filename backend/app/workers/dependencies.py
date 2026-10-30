@@ -4,9 +4,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.persistence.jobs.extractions.extraction_repository import ExtractionRepository
 from app.services.shared.database import DatabaseService
-from sqlalchemy.exc import SQLAlchemyError
 
 logger = structlog.get_logger(__name__)
 

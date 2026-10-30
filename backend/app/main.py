@@ -4,16 +4,17 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.models.api.health import RootResponse
 from app.routes.articles import router as articles_router
 from app.routes.customers import router as customers_router
 from app.routes.extractions import router as extractions_router
 from app.routes.inquiries import router as inquiries_router
 from app.services.shared.database import database_service
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
 
 logger = structlog.get_logger(__name__)
 
@@ -36,8 +37,6 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://localhost:4173",
-        "https://skillmatch.bridgefield.io",
     ],
     allow_credentials=True,
     allow_methods=["*"],

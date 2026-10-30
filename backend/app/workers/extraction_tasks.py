@@ -6,8 +6,12 @@ from uuid import UUID
 
 import structlog
 
+from app.config import get_settings
 from app.models.jobs.extraction import ExtractionStatus
 from app.pipelines.extraction.pipeline import run_pipeline
+from app.pipelines.extraction.prompts import INQUIRY_EXTRACTION_PROMPT_VERSION
+from app.services.shared.minio import MinioService
+from app.services.shared.openai import OpenAIService
 from app.workers.celery_app import celery_app
 from app.workers.dependencies import extraction_repository
 
@@ -27,11 +31,22 @@ async def run_extraction(job_id: UUID) -> None:
             await repository.save(job)
 
         try:
-            await run_pipeline(report_progress)
-            job.status = ExtractionStatus.SUCCEEDED
-            job.current_step = None
-            job.finished_at = datetime.now(UTC)
-            await repository.save(job)
+            if not job.source_key:
+                raise ValueError("Extraction job must have a source key")
+            if job.document_id is None:
+                raise ValueError("Extraction job must reference a document")
+            settings = get_settings()
+            async with OpenAIService(settings) as openai:
+                result = await run_pipeline(
+                    job.source_key,
+                    MinioService(settings),
+                    openai,
+                    report_progress,
+                    job.document_id,
+                )
+            await repository.complete(
+                job, result, settings.MODEL, INQUIRY_EXTRACTION_PROMPT_VERSION
+            )
             logger.info("extraction_job_succeeded", job_id=str(job_id))
         except Exception:
             logger.exception("extraction_job_failed", job_id=str(job_id))

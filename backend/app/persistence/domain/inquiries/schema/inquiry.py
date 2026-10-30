@@ -64,6 +64,7 @@ class InquiryDocument(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     inquiry_id: UUID = Field(foreign_key="inquiry.id", ondelete="CASCADE", index=True)
     filename: str = Field(sa_type=Text)
+    source_key: str | None = Field(default=None, max_length=1024)
     parent_document_id: UUID | None = Field(
         default=None, foreign_key="inquiry_document.id", ondelete="CASCADE"
     )

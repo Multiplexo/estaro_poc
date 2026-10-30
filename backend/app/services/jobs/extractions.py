@@ -3,14 +3,16 @@
 from uuid import UUID
 
 import structlog
-from app.models.api.extractions import ExtractionRequest
-from app.models.jobs.extraction import ExtractionJobStatus
-from app.persistence.jobs.extractions.extraction_repository import ExtractionRepository
-from app.workers.celery_app import celery_app
 from fastapi import HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from kombu.exceptions import OperationalError
 from redis.exceptions import RedisError
+
+from app.models.api.extractions import ExtractionRequest
+from app.models.domain.inquiries import InquiryExtractionSnapshot
+from app.models.jobs.extraction import ExtractionJobStatus
+from app.persistence.jobs.extractions.extraction_repository import ExtractionRepository
+from app.workers.celery_app import celery_app
 
 logger = structlog.get_logger(__name__)
 
@@ -51,3 +53,12 @@ class ExtractionService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Extraction job not found"
             )
         return job.to_model()
+
+    async def get_result(self, job_id: UUID) -> InquiryExtractionSnapshot:
+        result = await self.repository.get_result(job_id)
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Extraction result not found",
+            )
+        return result

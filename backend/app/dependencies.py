@@ -5,14 +5,23 @@ from typing import Annotated
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.config import SettingsDep
 from app.persistence.domain.articles.article_repository import ArticleRepository
 from app.persistence.domain.customers.customer_repository import CustomerRepository
 from app.persistence.domain.inquiries.inquiry_repository import InquiryRepository
 from app.persistence.jobs.extractions.extraction_repository import ExtractionRepository
 from app.services.jobs.extractions import ExtractionService
 from app.services.shared.database import get_session
+from app.services.shared.minio import MinioService
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+
+async def get_minio_service(settings: SettingsDep) -> MinioService:
+    return MinioService(settings)
+
+
+MinioServiceDep = Annotated[MinioService, Depends(get_minio_service)]
 
 
 async def get_extraction_service(session: SessionDep) -> ExtractionService:
