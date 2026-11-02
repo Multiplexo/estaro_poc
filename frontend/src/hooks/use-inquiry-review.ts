@@ -1,9 +1,11 @@
+import { inquiryDetail } from '@/lib/inquiry-detail'
+import { inquiryTableSections } from '@/lib/inquiry-table-data'
 import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef } from 'react'
 import { useBlocker } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { sourceSelection, type SourceNavigation } from './use-source-navigation'
 import { ApiError } from '@/lib/api'
-import type { AnalysisResponse, InquiryReview } from '@/lib/inquiry-models'
+import type { AnalysisResponse, InquiryReview, InquiryResponse } from '@/lib/inquiry-models'
 import { analysisFields, fieldHighlights, type AnalysisField, type Highlight } from '@/lib/inquiry-analysis'
 import { confirmPositions, reviewedField, reviewFieldGroups, reviewSection, type ReviewDraft } from '@/lib/inquiry-review'
 import { createInquiryEvaluation } from '@/lib/inquiry-evaluation'
@@ -22,13 +24,18 @@ function focusField(id: string) {
   })
 }
 
-export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) {
+export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, inquiry?: InquiryResponse) {
   const { t } = useTranslation()
   const api = useApi()
   const matchingAvailable = analysis.extraction?.review_mode !== 'fields'
   const queryClient = useQueryClient()
   const fields = useMemo(() => analysis.extraction ? analysisFields(analysis.extraction) : [], [analysis.extraction])
   const evaluation = useMemo(() => analysis.extraction ? createInquiryEvaluation(analysis.extraction, fields) : undefined, [analysis.extraction, fields])
+  const baseTableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, analysis)) : [], [inquiry, analysis])
+  const dataFields = useMemo<AnalysisField[]>(() => baseTableSections.flatMap((section) => section.fields.filter((field) => field.fieldId.startsWith('data:')).map((field) => ({
+    id: field.fieldId, kind: 'requirements' as const, field: { value: field.value, status: field.value ? 'present' as const : 'missing' as const, sources: [] },
+  }))), [baseTableSections])
+  const allFields = useMemo(() => [...fields, ...dataFields], [fields, dataFields])
   const groups = useMemo(() => reviewFieldGroups(fields), [fields])
   const articleFields = useMemo(() => groups.positions.flatMap((position) => position.fields), [groups.positions])
   const highlights = useMemo(() => fieldHighlights(fields), [fields])
@@ -36,6 +43,8 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
   // Reconcile during rendering so every view sees the same revision immediately.
   if ((analysis.review?.revision ?? 0) > state.latest.revision) dispatch({ type: 'receive', review: analysis.review! })
   const { draft, baseline } = state
+  const tableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, { ...analysis, review: draft })) : [], [inquiry, analysis, draft])
+  const tableValues = new Map(tableSections.flatMap((section) => section.fields.map((field) => [field.fieldId, field.value ?? ''] as const)))
   const dirty = useMemo(() => reviewIsDirty({ draft, baseline }), [draft, baseline])
   const conflict = reviewHasConflict(state)
   const summary = useMemo(() => evaluation?.summary(draft), [draft, evaluation])
@@ -52,13 +61,13 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
   }), [groups.positions, positionStatuses, draft, evaluation, matchingAvailable])
   const customerSuggestions = useMemo(() => evaluation?.suggestions(draft, 'customer') ?? [], [evaluation, draft])
   const openFields = summary?.openFields ?? []
-  const defaultValues = useMemo(() => new Map(fields.map((entry) => [entry.id, { value: entry.field.value ?? '', confirmed: false }])), [fields])
+  const defaultValues = useMemo(() => new Map(allFields.map((entry) => [entry.id, { value: entry.field.value ?? '', confirmed: false }])), [allFields])
   const highlightsByField = useMemo(() => {
     const grouped = new Map<string, Highlight[]>()
-    for (const entry of fields) grouped.set(entry.id, [])
+    for (const entry of allFields) grouped.set(entry.id, [])
     for (const highlight of highlights) grouped.get(highlight.fieldId)!.push(highlight)
     return grouped
-  }, [fields, highlights])
+  }, [allFields, highlights])
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['inquiry-analysis', inquiryId] })
   const mutation = useMutation({
     mutationFn: async (submitted: ReviewDraft): Promise<InquiryReview> => {
@@ -68,6 +77,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
     },
     onSuccess: (review, submitted) => {
       void queryClient.invalidateQueries({ queryKey: ['inquiries'] })
+      void queryClient.invalidateQueries({ queryKey: ['inquiry', inquiryId] })
       dispatch({ type: 'saved', review, submitted })
       queryClient.setQueriesData<AnalysisResponse>({ queryKey: ['inquiry-analysis', inquiryId] }, (data) =>
         data && (data.review?.revision ?? 0) <= (review.revision ?? 0) ? { ...data, review } : data)
@@ -123,18 +133,18 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
     selectDocument,
     selectHighlight,
   }), [analysis.sources, highlights, state.selection, selectDocument, selectHighlight])
-  const fieldHandlers = useMemo(() => new Map(fields.map((entry) => [entry.id, {
+  const fieldHandlers = useMemo(() => new Map(allFields.map((entry) => [entry.id, {
     onChange: (value: string) => dispatch({ type: 'change', entry, value }),
     onFocus: () => selectField(entry),
     onConfirm: () => dispatch({ type: 'confirm', entry }),
     onReset: () => dispatch({ type: 'change', entry, value: entry.field.value ?? '' }),
-  }])), [fields, selectField])
+  }])), [allFields, selectField])
   const resolveConflict = (type: 'reload' | 'reapply') => {
     if (state.latest.revision <= state.baseline.revision) return
     mutation.reset()
     dispatch({ type })
   }
-  const fieldValue = (entry: AnalysisField) => draft.fields[entry.id] ?? defaultValues.get(entry.id)!
+  const fieldValue = (entry: AnalysisField) => draft.fields[entry.id] ?? (entry.id.startsWith('data:') ? { value: tableValues.get(entry.id) ?? '', confirmed: false } : defaultValues.get(entry.id)!)
   const fieldView = (entry: AnalysisField) => ({
     ...fieldHandlers.get(entry.id)!,
     entry, highlights: highlightsByField.get(entry.id)!, selected: state.activeFieldId === entry.id,
@@ -149,6 +159,8 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse) 
     source,
     editor: {
       matchingAvailable,
+      tableSections,
+      tableFields: new Map(allFields.map((entry) => [entry.id, entry])),
       groups: { customerFields: groups.customerFields, inquiryFields: groups.inquiryFields, articleFields },
       trafficLight: summary?.trafficLight ?? inquiryTrafficLight([]),
       positions, customerId: draft.customer_id, customerSuggestions,

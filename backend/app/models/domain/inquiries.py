@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.domain.extraction_review import ExtractionReview
+from app.models.domain.inquiry_data import InquiryData
 from app.models.jobs.extraction import InquiryExtraction
 from app.models.shared.pagination import Pagination
 
@@ -56,6 +57,7 @@ class Inquiry(BaseModel):
     deletion_retry_at: datetime | None = Field(
         default=None, description="When to retry deletion, if scheduled."
     )
+    daten: InquiryData = Field(default_factory=InquiryData)
     documents: list[InquiryDocument] = Field(default_factory=list)
 
 

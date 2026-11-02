@@ -30,3 +30,13 @@ export async function trackExtraction(client: QueryClient, job: ExtractionJobSta
   })
   void client.invalidateQueries({ queryKey: extractionJobsKey })
 }
+
+export async function removeInquiryExtractions(client: QueryClient, inquiryId: string): Promise<void> {
+  await client.cancelQueries({ queryKey: extractionJobsKey })
+  client.setQueryData<TrackedExtraction[]>(extractionJobsKey, (previous) => {
+    const items = (previous ?? readExtractions()).filter((entry) => entry.job.inquiry_id !== inquiryId)
+    saveExtractions(items)
+    return items
+  })
+  void client.invalidateQueries({ queryKey: extractionJobsKey })
+}

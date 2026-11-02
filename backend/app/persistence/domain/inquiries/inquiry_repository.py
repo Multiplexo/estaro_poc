@@ -19,7 +19,11 @@ from app.models.domain.inquiries import (
     InquiryOverviewPage,
     InquiryOverviewQuery,
 )
-from app.models.jobs.extraction import ExtractedItem, InquiryExtraction
+from app.models.jobs.extraction import (
+    CUSTOMER_FIELD_NAMES,
+    INQUIRY_FIELD_NAMES,
+    POSITION_FIELD_NAMES,
+)
 from app.persistence.domain.inquiries.schema.inquiry import Inquiry as InquirySchema
 from app.persistence.domain.inquiries.schema.inquiry import (
     InquiryDocument as DocumentSchema,
@@ -31,6 +35,19 @@ from app.persistence.domain.inquiries.schema.inquiry_extraction import (
 logger = structlog.get_logger(__name__)
 
 
+def _extracted_value(name: str) -> ColumnElement[str]:
+    result = col(ExtractionSchema.result)
+    current = (
+        result["kundeninformationen"][CUSTOMER_FIELD_NAMES[name]]
+        if name in CUSTOMER_FIELD_NAMES
+        else result[INQUIRY_FIELD_NAMES[name]]
+    )
+    return case(
+        (col(ExtractionSchema.schema_version) >= 3, current["value"].as_string()),
+        else_=result[name]["value"].as_string(),
+    )
+
+
 def _reviewed_value(name: str) -> ColumnElement[str]:
     review = col(ExtractionSchema.review)
     return case(
@@ -38,7 +55,7 @@ def _reviewed_value(name: str) -> ColumnElement[str]:
             review["fields"].has_key(name),
             func.coalesce(review["fields"][name]["value"].as_string(), ""),
         ),
-        else_=col(ExtractionSchema.result)[name]["value"].as_string(),
+        else_=_extracted_value(name),
     )
 
 
@@ -61,7 +78,12 @@ class InquiryRepository:
         )
         result = col(ExtractionSchema.result)
         review = col(ExtractionSchema.review)
-        item_count = func.jsonb_array_length(result["items"])
+        item_count = func.jsonb_array_length(
+            case(
+                (col(ExtractionSchema.schema_version) >= 3, result["positionen"]),
+                else_=result["items"],
+            )
+        )
         item_indexes = (
             func.generate_series(0, item_count - 1)
             .table_valued("index")
@@ -77,7 +99,7 @@ class InquiryRepository:
                         ]["confirmed"]
                         .as_boolean()
                         .is_not(True)
-                        for name in ExtractedItem.model_fields
+                        for name in POSITION_FIELD_NAMES
                     )
                 )
             )
@@ -88,8 +110,7 @@ class InquiryRepository:
             item_count > 0,
             *(
                 review["fields"][name]["confirmed"].as_boolean().is_(True)
-                for name in InquiryExtraction.model_fields
-                if name != "items"
+                for name in [*CUSTOMER_FIELD_NAMES, *INQUIRY_FIELD_NAMES]
             ),
             ~unconfirmed_item,
         )

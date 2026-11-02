@@ -26,7 +26,7 @@ function InquiryDetail() {
       </header>
       {inquiry.isError || analysis.isError ? <p role="alert" className="text-destructive">{inquiry.error?.message ?? analysis.error?.message}</p> : null}
       {inquiry.isPending || analysis.isPending ? <p role="status">{t('review.loading')}</p> : null}
-      {data?.extraction ? <InquiryWorkspace key={inquiryId} inquiryId={inquiryId} analysis={{ ...data, extraction: data.extraction }} /> : (
+      {data?.extraction ? <InquiryWorkspace key={inquiryId} inquiryId={inquiryId} inquiry={inquiry.data} analysis={{ ...data, extraction: data.extraction }} /> : (
         <div className="grid min-w-0 gap-6 lg:grid-cols-2">
           <section><h2 className="text-xl font-semibold">{t('review.information')}</h2><p className="mt-3 text-base text-muted-foreground">{inquiry.data?.processing_job?.status === 'cancelled' ? t('review.cancelled') : inquiry.data?.processing_job?.status === 'failed' ? t('review.failed') : inquiry.data?.processing_job?.status === 'completed' || !inquiry.data?.processing_job ? t('review.noExtraction') : t('review.processing')}</p></section>
           <SourcePanel inquiryId={inquiryId} sources={data?.sources ?? []} highlights={[]} navigation={navigation} />

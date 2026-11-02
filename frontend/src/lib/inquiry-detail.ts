@@ -1,3 +1,5 @@
+import { inquirySchemaFields } from './inquiry-schema'
+import type { InquiryData } from './generated/Api'
 import type { AnalysisResponse, InquiryResponse, ReadingSource } from './inquiry-models'
 import { analysisFields, customerIdentityKinds, itemFieldKinds } from './inquiry-analysis'
 import { reviewDraft, reviewedField } from './inquiry-review'
@@ -31,6 +33,40 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
   const summary = evaluation?.summary(review)
   const values = new Map(fields.map((entry) => [entry.id, reviewedField(entry, review).value]))
   const value = (id: string) => values.get(id)?.trim() || null
+  const data: InquiryData = structuredClone(inquiry.daten ?? {})
+  if (result) {
+    data.kundeninformationen = { ...data.kundeninformationen, name: value('customer'), kunde: value('customer_number'), ansprechpartner: value('contact_name'), zusatz: [value('contact_email'), value('contact_phone')].filter(Boolean).join('\n') || null,
+      ort: { ...data.kundeninformationen?.ort, stadt: value('customer_location') } }
+    data.beleginformationen = { ...data.beleginformationen, lieferdatum: value('delivery_date') }
+    data.belegdetails = { ...data.belegdetails, ihreBelegnummer: value('document_number') || value('inquiry_number'), belegZu: value('reference_number') }
+    data.angebotsdetails = { ...data.angebotsdetails, angebotGueltigBis: value('offer_valid_until') }
+    data.kopftext = value('requirements')
+  }
+  if (result) data.positionen = result.items.map((_, index) => ({
+    ...data.positionen?.[index],
+    bezeichnung: value(`item-${index}-article`), bezeichnung2: value(`item-${index}-material`),
+    dimensionstext: value(`item-${index}-dimensions`), menge: value(`item-${index}-quantity`),
+    mengeneinheit: value(`item-${index}-unit`), langtext: value(`item-${index}-requirements`),
+    zusatzinfos: value(`item-${index}-alternatives`), zeugnis: value(`item-${index}-certificates`),
+  }))
+  for (const [id, field] of Object.entries(review.fields)) {
+    if (!id.startsWith('data:')) continue
+    const parts = id.slice(5).split('.')
+    let target: Record<string, unknown> = data as Record<string, unknown>
+    for (const part of parts.slice(0, -1)) {
+      if (!target[part] || typeof target[part] !== 'object') target[part] = {}
+      target = target[part] as Record<string, unknown>
+    }
+    target[parts.at(-1)!] = field.value || null
+  }
+  const sections = new Map<string, { id: string; label: string; value: string | null }[]>()
+  for (const definition of inquirySchemaFields) {
+    let current: unknown = data
+    for (const part of definition.path.split('.')) current = current && typeof current === 'object' ? (current as Record<string, unknown>)[part] : null
+    const group = sections.get(definition.groupLabel!) ?? []
+    group.push({ id: definition.path, label: definition.label, value: typeof current === 'string' ? current : null })
+    sections.set(definition.groupLabel!, group)
+  }
   const positions = result?.items.map((_, index) => ({
     number: index + 1,
     fields: itemFieldKinds.map((kind) => ({ kind, value: value(`item-${index}-${kind}`) })),
@@ -43,6 +79,8 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
     ? matchingCustomers[0].id
     : suggestions?.status === 'matched' && suggestions.candidates?.length === 1 ? suggestions.candidates[0].id : undefined)
   return {
+    positionData: data.positionen ?? [],
+    sections: [...sections].map(([label, fields]) => ({ label, fields })),
     title: emailHeader(email, 'subject') || [value('customer'), value('inquiry_number') || value('reference_number')].filter(Boolean).join(' · ') || inquiry.documents.find((document) => !document.parent_document_id)?.filename || 'Anfrage',
     emails, customerId, customerName: value('customer'), sender: emailHeader(email, 'sender'),
     reference: value('reference_number'), inquiryNumber: value('inquiry_number'), documentNumber: value('document_number'),

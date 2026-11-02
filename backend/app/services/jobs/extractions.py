@@ -11,7 +11,8 @@ from redis.exceptions import RedisError
 from app.models.api.extractions import ExtractionRequest, ExtractionResultUpdate
 from app.models.domain.extraction_review import ExtractionReviewConflict
 from app.models.domain.inquiries import InquiryExtractionSnapshot
-from app.models.jobs.extraction import ExtractedField, ExtractionJobStatus
+from app.models.domain.inquiry_mapping import inquiry_data_field_ids
+from app.models.jobs.extraction import ExtractionJobStatus, extraction_field_ids
 from app.persistence.jobs.extractions.extraction_repository import ExtractionRepository
 from app.workers.celery_app import celery_app
 
@@ -68,15 +69,8 @@ class ExtractionService:
         self, job_id: UUID, request: ExtractionResultUpdate
     ) -> InquiryExtractionSnapshot:
         snapshot = await self.get_result(job_id)
-        field_ids = {
-            name
-            for name in type(snapshot.result).model_fields
-            if isinstance(getattr(snapshot.result, name), ExtractedField)
-        }
-        field_ids.update(
-            f"item-{index}-{name}"
-            for index, item in enumerate(snapshot.result.items)
-            for name in type(item).model_fields
+        field_ids = extraction_field_ids(snapshot.result) | inquiry_data_field_ids(
+            len(snapshot.result.positionen)
         )
         unknown_fields = request.fields.keys() - field_ids
         if unknown_fields:

@@ -1,3 +1,6 @@
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { InquiryViewTabs } from '@/components/inquiries/inquiry-view-tabs'
+import { InquiryDataTable } from '@/components/inquiries/inquiry-data-table'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -37,6 +40,9 @@ function InquiryOverviewPage() {
       {inquiry.isPending || analysis.isPending ? <p role="status" className="text-sm text-muted-foreground">Anfrage wird geladen …</p> : null}
       {detail && inquiry.data ? <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_23rem]">
         <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-6">
+        <Tabs defaultValue="overview" className="min-w-0 gap-4">
+        <InquiryViewTabs />
+        <TabsContent value="overview" className="space-y-5">
         <div className="@container min-w-0 space-y-5">
           {detail.extractionNotice ? <p role="status" className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">{detail.extractionNotice}</p> : null}
           <InquiryDetailsCard detail={detail} />
@@ -44,6 +50,9 @@ function InquiryOverviewPage() {
         <div className="@container order-2 min-w-0">
           <InquiryPositions detail={detail} />
         </div>
+        </TabsContent>
+        <TabsContent value="table"><InquiryDataTable detail={detail} /></TabsContent>
+        </Tabs>
         <div className="@container order-3 min-w-0">
           <div className="grid min-w-0 items-start gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <InquiryEmailCard emails={detail.emails} />

@@ -46,16 +46,16 @@ function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse): 
   })
   return {
     review_mode: 'fields',
-    customer: field(result.customer), customer_number: field(result.customer_number),
-    customer_location: field(result.customer_location), contact_name: field(result.contact_name),
-    contact_email: field(result.contact_email), contact_phone: field(result.contact_phone),
-    inquiry_number: field(result.inquiry_number), document_number: field(result.document_number),
-    offer_valid_until: field(result.offer_valid_until), reference_number: field(result.reference_number),
-    requirements: field(result.requirements), delivery_date: field(result.delivery_date),
-    items: result.items.map((item) => ({
-      article: field(item.article), material: field(item.material), dimensions: field(item.dimensions),
-      quantity: field(item.quantity), unit: field(item.unit), requirements: field(item.requirements),
-      alternatives: field(item.alternatives), certificates: field(item.certificates),
+    customer: field(result.kundeninformationen?.name), customer_number: field(result.kundeninformationen?.kunde),
+    customer_location: field(result.kundeninformationen?.ort), contact_name: field(result.kundeninformationen?.ansprechpartner),
+    contact_email: field(result.kundeninformationen?.email), contact_phone: field(result.kundeninformationen?.telefon),
+    inquiry_number: field(result.anfragenummer), document_number: field(result.ihreBelegnummer),
+    offer_valid_until: field(result.angebotGueltigBis), reference_number: field(result.belegZu),
+    requirements: field(result.kopftext), delivery_date: field(result.lieferdatum),
+    items: (result.positionen ?? []).map((item) => ({
+      article: field(item.bezeichnung), material: field(item.werkstoff), dimensions: field(item.dimensionstext),
+      quantity: field(item.menge), unit: field(item.mengeneinheit), requirements: field(item.langtext),
+      alternatives: field(item.alternativen), certificates: field(item.zeugnis),
     })),
     customer_match: { status: 'unmatched', candidates: [] },
   }

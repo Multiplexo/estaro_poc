@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import type { Inquiry } from '@/lib/api'
+import { ApiError, type Inquiry } from '@/lib/api'
+import { removeInquiryExtractions } from '@/lib/extraction-jobs'
 import { useApi } from './use-api'
 
 export function useDeleteInquiry({ onDeleted }: { onDeleted?: () => void | Promise<void> } = {}) {
@@ -9,8 +10,16 @@ export function useDeleteInquiry({ onDeleted }: { onDeleted?: () => void | Promi
   const [inquiry, setInquiry] = useState<Inquiry | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const mutation = useMutation({
-    mutationFn: (id: string) => api.inquiries.deleteInquiry(id),
+    mutationFn: async (id: string) => {
+      try {
+        await api.inquiries.deleteInquiry(id)
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) return
+        throw error
+      }
+    },
     onSuccess: async (_, id) => {
+      await removeInquiryExtractions(client, id)
       await onDeleted?.()
       const keys = [['inquiry', id], ['inquiry-analysis', id], ['inquiry-job', id]]
       await Promise.all(keys.map((queryKey) => client.cancelQueries({ queryKey })))

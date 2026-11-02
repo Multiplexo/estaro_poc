@@ -6,8 +6,8 @@ from langchain_core.utils.function_calling import convert_to_json_schema
 
 from app.models.jobs.extraction import (
     ClassifiedDocument,
-    ExtractedField,
     InquiryExtraction,
+    extraction_fields,
 )
 from app.pipelines.extraction.prompts import INQUIRY_EXTRACTION_PROMPT, SYSTEM_PROMPT
 from app.services.shared.openai import OpenAIService
@@ -18,19 +18,15 @@ logger = structlog.get_logger(__name__)
 def _ground_citations(
     extraction: InquiryExtraction, document: ClassifiedDocument, document_id: str
 ) -> InquiryExtraction:
-    for record in [extraction, *extraction.items]:
-        for name in type(record).model_fields:
-            field = getattr(record, name)
-            if not isinstance(field, ExtractedField):
-                continue
-            for citation in field.citations:
-                source = document.sources.get(citation.section_id)
-                if citation.document_id != document_id or source is None:
-                    raise ValueError("Citation must reference a known document section")
-                citation.bbox = source.bbox.model_copy()
-                citation.page_number = source.page_number
-                citation.page_width = source.page_width
-                citation.page_height = source.page_height
+    for _, field in extraction_fields(extraction):
+        for citation in field.citations:
+            source = document.sources.get(citation.section_id)
+            if citation.document_id != document_id or source is None:
+                raise ValueError("Citation must reference a known document section")
+            citation.bbox = source.bbox.model_copy()
+            citation.page_number = source.page_number
+            citation.page_width = source.page_width
+            citation.page_height = source.page_height
     return extraction
 
 
@@ -75,7 +71,7 @@ async def extract_inquiry(
     logger.info(
         "inquiry_extraction_completed",
         document_id=document_id,
-        item_count=len(extraction.items),
+        item_count=len(extraction.positionen or []),
         page_count=len(document.page_images),
     )
     return extraction

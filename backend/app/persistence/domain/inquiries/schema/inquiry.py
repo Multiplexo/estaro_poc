@@ -1,14 +1,17 @@
 """Database schemas for inquiries and their documents."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, Enum, Index, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.domain.inquiries import FileType
 from app.models.domain.inquiries import Inquiry as InquiryModel
 from app.models.domain.inquiries import InquiryDocument as InquiryDocumentModel
+from app.models.domain.inquiry_data import InquiryData
 
 
 class Inquiry(SQLModel, table=True):
@@ -21,6 +24,7 @@ class Inquiry(SQLModel, table=True):
             created_at=self.created_at,
             deletion_requested_at=self.deletion_requested_at,
             deletion_retry_at=self.deletion_retry_at,
+            daten=InquiryData.model_validate(self.daten),
             documents=[document.to_model() for document in self.documents],
         )
 
@@ -36,6 +40,7 @@ class Inquiry(SQLModel, table=True):
     )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
+    daten: dict[str, Any] = Field(default_factory=dict, sa_type=JSONB)
     created_at: datetime = Field(sa_type=DateTime(timezone=True))
     deletion_requested_at: datetime | None = Field(
         default=None, sa_type=DateTime(timezone=True)

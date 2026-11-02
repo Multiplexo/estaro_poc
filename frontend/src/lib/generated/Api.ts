@@ -16,6 +16,18 @@ export type FileType = "pdf" | "msg";
 /** ExtractionStatus */
 export type ExtractionStatus = "queued" | "running" | "succeeded" | "failed";
 
+/** Angebotsdetails */
+export interface Angebotsdetails {
+  /** Angebotgueltigbis */
+  angebotGueltigBis?: string | null;
+  /** Status */
+  status?: string | null;
+  /** Rueckmeldungzumangebot */
+  rueckmeldungZumAngebot?: string | null;
+  /** Kundenquelle */
+  kundenquelle?: string | null;
+}
+
 /**
  * Article
  * Article master data, including inventory, units, and purchasing details.
@@ -177,6 +189,58 @@ export interface Article {
    * Whether the article is marked as exotic.
    */
   is_exotic?: boolean | null;
+}
+
+/** Belegdetails */
+export interface Belegdetails {
+  /** Belegmatchcode */
+  belegmatchcode?: string | null;
+  /** Ihrzeichen */
+  ihrZeichen?: string | null;
+  /** Ihrebelegnummer */
+  ihreBelegnummer?: string | null;
+  /** Belegzu */
+  belegZu?: string | null;
+  /** Versandart */
+  versandart?: string | null;
+  /** Lieferbedingung */
+  lieferbedingung?: string | null;
+  /** Zahlungsaufteilung */
+  zahlungsaufteilung?: string | null;
+  /** Sprache */
+  sprache?: string | null;
+  /** Kostenstelle */
+  kostenstelle?: string | null;
+  /** Kostentraeger */
+  kostentraeger?: string | null;
+  /** Buchungskreis */
+  buchungskreis?: string | null;
+  /** Abweichendererloescode */
+  abweichenderErloescode?: string | null;
+  /** Memo */
+  memo?: string | null;
+  /** Label */
+  label?: string | null;
+}
+
+/** Beleginformationen */
+export interface Beleginformationen {
+  /** Belegdatum */
+  belegdatum?: string | null;
+  /** Lieferdatum */
+  lieferdatum?: string | null;
+  /** Valuta */
+  valuta?: string | null;
+  /** Zahlungskondition */
+  zahlungskondition?: string | null;
+  /** Vorgang */
+  vorgang?: string | null;
+  /** Projektnummer */
+  projektnummer?: string | null;
+  /** Lagerinfobeleg */
+  lagerinfoBeleg?: string | null;
+  /** Druckprozessvariante */
+  druckprozessVariante?: string | null;
 }
 
 /** Body_extraction */
@@ -436,6 +500,22 @@ export interface DocumentUrl {
   url: string;
 }
 
+/** ExtractedCustomer */
+export interface ExtractedCustomer {
+  /** Ursprünglich anfragendes Unternehmen aus Signatur oder PDF-Absender. Niemals ESTARO oder einen internen Weiterleiter angeben. */
+  name?: ExtractedField;
+  /** Ausdrücklich dem anfragenden Kunden zugeordnete ESTARO-Kundennummer. Keine Lieferantennummer, Empfänger-Kundennummer oder Divers-Vorgabe. */
+  kunde?: ExtractedField;
+  /** Ort/Standort des anfragenden Unternehmens, nicht der Lieferort. */
+  ort?: ExtractedField;
+  /** Name des zuständigen Ansprechpartners beim anfragenden Kunden aus Nachricht, Signatur oder 'Ihr Zeichen'. Kein ESTARO-Mitarbeiter. */
+  ansprechpartner?: ExtractedField;
+  /** E-Mail-Adresse des Kunden-Ansprechpartners; ersatzweise ausdrücklich zugehörige Kunden-Kontaktadresse. Kein interner Weiterleiter. */
+  email?: ExtractedField;
+  /** Telefon/Mobilnummer des Kunden-Ansprechpartners, ggf. gekennzeichnete Faxnummer. Bei mehreren Nummern deren Zuordnung erhalten. */
+  telefon?: ExtractedField;
+}
+
 /**
  * ExtractedField
  * Ein extrahierter Wert mit seinen wörtlichen Quellenbelegen.
@@ -470,21 +550,21 @@ export interface ExtractedField {
  */
 export interface ExtractedItem {
   /** Artikelart und ausdrückliche Ausführung, z. B. nahtloses Rohr, geschweißtes Rohr, Rundstahl oder Rohrbogen. Kunden-Artikelnummern sind keine ESTARO-Artikelnummern. */
-  article: ExtractedField;
+  bezeichnung?: ExtractedField;
   /** Werkstoffgüte, z. B. 1.4841. */
-  material: ExtractedField;
+  werkstoff?: ExtractedField;
   /** Benannte Abmessungen: Außendurchmesser, Wandstärke, Breite, Dicke, Länge bzw. Längenbereich und Fixlänge, jeweils mit belegter Einheit. Handels-/Herstelllänge ohne Zahlenwert nicht zu einer festen Länge ergänzen. */
-  dimensions: ExtractedField;
+  dimensionstext?: ExtractedField;
   /** Ausgewiesene Bestellmenge der Position. Meter-/Kilogrammmenge von Stabanzahl, Stücklänge, Einzelgewicht und Gesamtgewicht trennen. Alternative Mengen gehören zu alternatives. */
-  quantity: ExtractedField;
+  menge?: ExtractedField;
   /** Mengeneinheit, z. B. m, Stück oder kg. Keine Umrechnung. */
-  unit: ExtractedField;
+  mengeneinheit?: ExtractedField;
   /** Normen, Toleranzen, Stabanzahl, Qualität, Charge, Prüfungen, Kennzeichnung, verbotene Ursprünge, Verpackung und Kundenwünsche. Bedingte Anforderungen ausdrücklich als bedingt wiedergeben. */
-  requirements: ExtractedField;
+  langtext?: ExtractedField;
   /** Ausdrücklich angefragte Alternativen für dieselbe Position. */
-  alternatives: ExtractedField;
+  alternativen?: ExtractedField;
   /** Ausdrücklich angefragte Zertifikate: APZ/WAZ/3.1, Ursprungszeugnis, Umstempelbescheinigung oder Lieferantenerklärung. Diese Dokumentarten nicht gleichsetzen; Negationen und Bedingungen erhalten. */
-  certificates: ExtractedField;
+  zeugnis?: ExtractedField;
 }
 
 /** ExtractionJobStatus */
@@ -581,8 +661,24 @@ export interface Inquiry {
    * When to retry deletion, if scheduled.
    */
   deletion_retry_at?: string | null;
+  daten?: InquiryData;
   /** Documents */
   documents?: InquiryDocument[];
+}
+
+/** InquiryData */
+export interface InquiryData {
+  kundeninformationen?: Kundeninformationen | null;
+  beleginformationen?: Beleginformationen | null;
+  lieferadresse?: Lieferadresse | null;
+  rechnungsadresse?: Rechnungsadresse | null;
+  /** Kopftext */
+  kopftext?: string | null;
+  belegdetails?: Belegdetails | null;
+  preisUndSteuerbasis?: PreisUndSteuerbasis | null;
+  angebotsdetails?: Angebotsdetails | null;
+  /** Positionen */
+  positionen?: InquiryPosition[] | null;
 }
 
 /**
@@ -623,36 +719,25 @@ export interface InquiryDocument {
  * Eingehende ESTARO-Anfrage mit wörtlichen Belegen für jedes extrahierte Feld.
  */
 export interface InquiryExtraction {
-  /** Ursprünglich anfragendes Unternehmen aus Signatur oder PDF-Absender. Niemals ESTARO oder einen internen Weiterleiter angeben. */
-  customer: ExtractedField;
-  /** Ausdrücklich dem anfragenden Kunden zugeordnete ESTARO-Kundennummer. Keine Lieferantennummer, Empfänger-Kundennummer oder Divers-Vorgabe. */
-  customer_number?: ExtractedField;
-  /** Ort/Standort des anfragenden Unternehmens, nicht der Lieferort. */
-  customer_location?: ExtractedField;
-  /** Name des zuständigen Ansprechpartners beim anfragenden Kunden aus Nachricht, Signatur oder 'Ihr Zeichen'. Kein ESTARO-Mitarbeiter. */
-  contact_name?: ExtractedField;
-  /** E-Mail-Adresse des Kunden-Ansprechpartners; ersatzweise ausdrücklich zugehörige Kunden-Kontaktadresse. Kein interner Weiterleiter. */
-  contact_email?: ExtractedField;
-  /** Telefon/Mobilnummer des Kunden-Ansprechpartners, ggf. gekennzeichnete Faxnummer. Bei mehreren Nummern deren Zuordnung erhalten. */
-  contact_phone?: ExtractedField;
+  kundeninformationen?: ExtractedCustomer;
   /** Explizite Anfragenummer des Kunden, auch unter 'Ihre Belegnummer'. Keine Bestell-, Zeichnungs-, Angebots- oder Positionsnummer. */
-  inquiry_number?: ExtractedField;
+  anfragenummer?: ExtractedField;
   /** Kundenreferenz für 'Ihre Belegnummer': Anfragenummer übernehmen, sofern keine separate Kunden-Belegnummer angegeben ist. Keine interne ESTARO-Angebotsnummer und keine erfundenen Platzhalter. */
-  document_number?: ExtractedField;
+  ihreBelegnummer?: ExtractedField;
   /** Ausdrücklich genannte Angebotsgültigkeit als Datum oder Zeitraum. Von Angebotsabgabefrist und Liefertermin trennen. Keine interne 1-Tag-Vorgabe übernehmen oder ein Datum berechnen. */
-  offer_valid_until?: ExtractedField;
+  angebotGueltigBis?: ExtractedField;
   /** Weitere ausdrücklich benannte Referenzen mit Typ, z. B. Bestell- oder Zeichnungsnummer. Die Anfragenummer separat erfassen. */
-  reference_number: ExtractedField;
+  belegZu?: ExtractedField;
   /**
-   * Items
+   * Positionen
    * Jede angefragte Position einzeln; keine Positionen erfinden.
    * @maxItems 100
    */
-  items: ExtractedItem[];
+  positionen?: ExtractedItem[];
   /** Anforderungen und Wünsche, die für die gesamte Anfrage gelten. */
-  requirements: ExtractedField;
+  kopftext?: ExtractedField;
   /** Ausdrücklich gewünschter Liefertermin oder Lieferzeitraum, auch je Position mit Positionsbezug. Originalangabe erhalten, z. B. KW 48 oder schnellstmöglich. Keine Frist aus dem Dokumentdatum ableiten. */
-  delivery_date?: ExtractedField;
+  lieferdatum?: ExtractedField;
 }
 
 /** InquiryExtractionSnapshot */
@@ -709,6 +794,7 @@ export interface InquiryOverview {
    * When to retry deletion, if scheduled.
    */
   deletion_retry_at?: string | null;
+  daten?: InquiryData;
   /** Documents */
   documents?: InquiryDocument[];
   latest_extraction: InquiryExtractionSnapshot;
@@ -720,6 +806,147 @@ export interface InquiryOverviewPage {
   items: InquiryOverview[];
   /** Total */
   total: number;
+}
+
+/** InquiryPosition */
+export interface InquiryPosition {
+  /** Nr */
+  nr?: string | null;
+  /** Typ */
+  typ?: string | null;
+  /** Artikel */
+  artikel?: string | null;
+  /** Bezeichnung */
+  bezeichnung?: string | null;
+  /** Dimensionstext */
+  dimensionstext?: string | null;
+  /** Bezeichnung2 */
+  bezeichnung2?: string | null;
+  /** Langtext */
+  langtext?: string | null;
+  /** Zubehoertext */
+  zubehoertext?: string | null;
+  /** Zusatzinfos */
+  zusatzinfos?: string | null;
+  /** Lagerinfopos */
+  lagerinfoPOS?: string | null;
+  /** Manuelleme */
+  manuelleME?: string | null;
+  /** Menge */
+  menge?: string | null;
+  /** Mengeneinheit */
+  mengeneinheit?: string | null;
+  /** Mengeinbasiseinheit */
+  mengeInBasiseinheit?: string | null;
+  /** Gesamtgewicht */
+  gesamtgewicht?: string | null;
+  /** Lagerbestand */
+  lagerbestand?: string | null;
+  /** Memo */
+  memo?: string | null;
+  /** Verfuegbar */
+  verfuegbar?: string | null;
+  /** Zeugnis */
+  zeugnis?: string | null;
+  /** Einzelpreis */
+  einzelpreis?: string | null;
+  /** Gesamtpreis */
+  gesamtpreis?: string | null;
+  /** Kalkulatorischerek */
+  kalkulatorischerEK?: string | null;
+  /** Roherloes */
+  roherloes?: string | null;
+  /** Rabatt */
+  rabatt?: string | null;
+}
+
+/** Kundeninformationen */
+export interface Kundeninformationen {
+  /** Empfaengertyp */
+  empfaengertyp?: string | null;
+  /** Kunde */
+  kunde?: string | null;
+  /** Anrede */
+  anrede?: string | null;
+  /** Name */
+  name?: string | null;
+  /** Namenszusatz */
+  namenszusatz?: string | null;
+  /** Ansprechpartner */
+  ansprechpartner?: string | null;
+  /** Zusatz */
+  zusatz?: string | null;
+  /** Strassepostfach */
+  strassePostfach?: string | null;
+  ort?: Ort | null;
+}
+
+/** Lieferadresse */
+export interface Lieferadresse {
+  /** Lieferanschrift */
+  lieferanschrift?: string | null;
+  /** Anrede */
+  anrede?: string | null;
+  /** Name */
+  name?: string | null;
+  /** Namenszusatz */
+  namenszusatz?: string | null;
+  /** Ansprechpartner */
+  ansprechpartner?: string | null;
+  /** Zusatz */
+  zusatz?: string | null;
+  /** Entladevorschriften */
+  entladevorschriften?: string | null;
+  /** Avisierungtel */
+  avisierungTel?: string | null;
+  /** Buchungsportalzustellung */
+  buchungsportalZustellung?: string | null;
+  /** Strassepostfach */
+  strassePostfach?: string | null;
+  ort?: Ort | null;
+}
+
+/** Ort */
+export interface Ort {
+  /** Land */
+  land?: string | null;
+  /** Postleitzahl */
+  postleitzahl?: string | null;
+  /** Stadt */
+  stadt?: string | null;
+}
+
+/** PreisUndSteuerbasis */
+export interface PreisUndSteuerbasis {
+  /** Besteuerungsart */
+  besteuerungsart?: string | null;
+  /** Abweichendebesteuerung */
+  abweichendeBesteuerung?: string | null;
+  /** Preiskennzeichen */
+  preiskennzeichen?: string | null;
+  /** Euustidnr */
+  euUstidNr?: string | null;
+  /** Eulaenderkuerzel */
+  euLaenderkuerzel?: string | null;
+  /** Waehrung */
+  waehrung?: string | null;
+  /** Kurs */
+  kurs?: string | null;
+}
+
+/** Rechnungsadresse */
+export interface Rechnungsadresse {
+  /** Rechnungsanschrift */
+  rechnungsanschrift?: string | null;
+  /** Anrede */
+  anrede?: string | null;
+  /** Name */
+  name?: string | null;
+  /** Ansprechpartner */
+  ansprechpartner?: string | null;
+  /** Strassepostfach */
+  strassePostfach?: string | null;
+  ort?: Ort | null;
 }
 
 /** ReviewedField */

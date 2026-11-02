@@ -14,11 +14,13 @@ from app.models.domain.extraction_review import (
     ExtractionReviewConflict,
 )
 from app.models.domain.inquiries import FileType, InquiryExtractionSnapshot
+from app.models.domain.inquiry_data import InquiryData
+from app.models.domain.inquiry_mapping import map_extraction_to_inquiry
 from app.models.jobs.extraction import (
     INQUIRY_EXTRACTION_SCHEMA_VERSION,
-    ExtractedField,
     ExtractionStatus,
     InquiryExtraction,
+    extraction_fields,
 )
 from app.persistence.domain.inquiries.schema.inquiry import Inquiry, InquiryDocument
 from app.persistence.domain.inquiries.schema.inquiry_extraction import (
@@ -95,12 +97,23 @@ class ExtractionRepository:
             ).model_dump(mode="json")
             self.session.add(record)
             response = record.to_model()
+            inquiry = await self.session.get(
+                Inquiry, record.inquiry_id, with_for_update=True
+            )
+            if inquiry is None:
+                raise ValueError("Extraction inquiry not found")
+            inquiry.daten = map_extraction_to_inquiry(
+                response.result,
+                response.review,
+                InquiryData.model_validate(inquiry.daten),
+            ).model_dump(mode="json")
+            self.session.add(inquiry)
             await self.session.commit()
             return response
         except ExtractionReviewConflict:
             await self.session.rollback()
             raise
-        except SQLAlchemyError:
+        except (SQLAlchemyError, ValueError):
             await self.session.rollback()
             logger.exception("extraction_result_update_failed", job_id=str(job_id))
             raise
@@ -122,25 +135,19 @@ class ExtractionRepository:
             document = await self.session.get(InquiryDocument, job.document_id)
             if document is None or document.inquiry_id != job.inquiry_id:
                 raise ValueError("Extraction document must belong to the inquiry")
-            for record in [result, *result.items]:
-                for name in type(record).model_fields:
-                    field = getattr(record, name)
-                    if not isinstance(field, ExtractedField):
-                        continue
-                    for citation in field.citations:
-                        if citation.document_id != str(document.id):
-                            raise ValueError(
-                                "Citation must reference the extraction document"
-                            )
-                        if (
-                            citation.bbox is None
-                            or citation.page_number is None
-                            or citation.page_width is None
-                            or citation.page_height is None
-                        ):
-                            raise ValueError(
-                                "Citation must have grounded page coordinates"
-                            )
+            for _, field in extraction_fields(result):
+                for citation in field.citations:
+                    if citation.document_id != str(document.id):
+                        raise ValueError(
+                            "Citation must reference the extraction document"
+                        )
+                    if (
+                        citation.bbox is None
+                        or citation.page_number is None
+                        or citation.page_width is None
+                        or citation.page_height is None
+                    ):
+                        raise ValueError("Citation must have grounded page coordinates")
 
             snapshot = ExtractionSchema(
                 inquiry_id=job.inquiry_id,
@@ -150,6 +157,15 @@ class ExtractionRepository:
                 prompt_version=prompt_version,
                 result=result.model_dump(mode="json"),
             )
+            inquiry = await self.session.get(
+                Inquiry, job.inquiry_id, with_for_update=True
+            )
+            if inquiry is None:
+                raise ValueError("Extraction inquiry not found")
+            inquiry.daten = map_extraction_to_inquiry(
+                result, existing=InquiryData.model_validate(inquiry.daten)
+            ).model_dump(mode="json")
+            self.session.add(inquiry)
             self.session.add(snapshot)
             job.status = ExtractionStatus.SUCCEEDED
             job.current_step = None
