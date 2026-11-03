@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import logo from '@/assets/estaro-logo.svg'
 import { RecentInquiries } from '@/components/inquiries/recent-inquiries'
 import { SidebarNavigation } from '@/components/sidebar-navigation'
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarTrigger } from '@/components/ui/sidebar'
+import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from '@/components/ui/sidebar'
 import { useSidebarNavigation } from '@/hooks/use-sidebar-navigation'
 
 export function AppSidebar() {
@@ -22,10 +22,6 @@ export function AppSidebar() {
         <SidebarNavigation />
         <RecentInquiries />
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border px-6 py-5">
-        <p className="text-xs font-medium text-white">Ihr Anfrage-Workspace</p>
-        <p className="mt-1 text-xs text-sidebar-foreground">Alles im Blick. Bis ins Detail.</p>
-      </SidebarFooter>
     </Sidebar>
   )
 }

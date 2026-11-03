@@ -32,11 +32,15 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   const fields = useMemo(() => analysis.extraction ? analysisFields(analysis.extraction) : [], [analysis.extraction])
   const evaluation = useMemo(() => analysis.extraction ? createInquiryEvaluation(analysis.extraction, fields) : undefined, [analysis.extraction, fields])
   const baseTableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, analysis)) : [], [inquiry, analysis])
+  const editorFields = useMemo(() => {
+    const values = new Map(baseTableSections.flatMap((section) => section.fields.map((field) => [field.fieldId, field.value] as const)))
+    return fields.map((entry) => values.has(entry.id) ? { ...entry, field: { ...entry.field, value: values.get(entry.id) ?? null } } : entry)
+  }, [fields, baseTableSections])
   const dataFields = useMemo<AnalysisField[]>(() => baseTableSections.flatMap((section) => section.fields.filter((field) => field.fieldId.startsWith('data:')).map((field) => ({
     id: field.fieldId, kind: 'requirements' as const, field: { value: field.value, status: field.value ? 'present' as const : 'missing' as const, sources: [] },
   }))), [baseTableSections])
-  const allFields = useMemo(() => [...fields, ...dataFields], [fields, dataFields])
-  const groups = useMemo(() => reviewFieldGroups(fields), [fields])
+  const allFields = useMemo(() => [...editorFields, ...dataFields], [editorFields, dataFields])
+  const groups = useMemo(() => reviewFieldGroups(editorFields), [editorFields])
   const articleFields = useMemo(() => groups.positions.flatMap((position) => position.fields), [groups.positions])
   const highlights = useMemo(() => fieldHighlights(fields), [fields])
   const [state, dispatch] = useReducer(reviewReducer, analysis.review, createReviewState)
@@ -106,8 +110,8 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   const assignmentsComplete = summary?.assignmentsComplete ?? false
   const complete = () => {
     if (positions.length === 0 || !assignmentsComplete || conflict || isPending || savePending.current) return
-    const submitted = confirmPositions(state.draft, fields)
-    dispatch({ type: 'confirmGroup', entries: fields })
+    const submitted = confirmPositions(state.draft, editorFields)
+    dispatch({ type: 'confirmGroup', entries: editorFields })
     submit(submitted)
   }
   const saveFromKeyboard = useEffectEvent(save)
@@ -158,6 +162,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   return {
     source,
     editor: {
+      revision: draft.revision,
       matchingAvailable,
       tableSections,
       tableFields: new Map(allFields.map((entry) => [entry.id, entry])),
@@ -175,7 +180,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
         if (next) { selectField(next); focusField(next.id) }
       },
       confirmAll: () => {
-        if (!disabled) dispatch({ type: 'confirmGroup', entries: fields })
+        if (!disabled) dispatch({ type: 'confirmGroup', entries: editorFields })
       },
       confirmAndNext: (entries: AnalysisField[]) => {
         if (disabled) return

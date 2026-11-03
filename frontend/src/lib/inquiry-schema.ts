@@ -1,6 +1,16 @@
-export interface SchemaFieldDefinition { path: string; label: string; group?: string; groupLabel?: string }
+import type { InquiryData, InquiryPosition } from './generated/Api'
 
-export const inquirySchemaFields: SchemaFieldDefinition[] = [
+type StringFieldPaths<T> = {
+  [Key in keyof T & string]-?: NonNullable<T[Key]> extends string ? Key
+    : NonNullable<T[Key]> extends object ? `${Key}.${StringFieldPaths<NonNullable<T[Key]>>}` : never
+}[keyof T & string]
+
+export type InquiryFieldPath = StringFieldPaths<Omit<InquiryData, 'positionen' | 'matching_provenance'>>
+type InquiryGroup = Exclude<keyof InquiryData, 'positionen' | 'matching_provenance'>
+
+export interface SchemaFieldDefinition<Path extends string> { path: Path; label: string; group?: InquiryGroup; groupLabel?: string }
+
+export const inquirySchemaFields: SchemaFieldDefinition<InquiryFieldPath>[] = [
   {"path": "kundeninformationen.empfaengertyp", "group": "kundeninformationen", "groupLabel": "Kundeninformationen", "label": "Empfängertyp"},
   {"path": "kundeninformationen.kunde", "group": "kundeninformationen", "groupLabel": "Kundeninformationen", "label": "Kunde"},
   {"path": "kundeninformationen.anrede", "group": "kundeninformationen", "groupLabel": "Kundeninformationen", "label": "Anrede"},
@@ -69,7 +79,7 @@ export const inquirySchemaFields: SchemaFieldDefinition[] = [
   {"path": "angebotsdetails.kundenquelle", "group": "angebotsdetails", "groupLabel": "Angebotsdetails", "label": "Kundenquelle"},
 ]
 
-export const positionSchemaFields: SchemaFieldDefinition[] = [
+export const positionSchemaFields: SchemaFieldDefinition<keyof InquiryPosition>[] = [
   {"path": "nr", "label": "Nr."},
   {"path": "typ", "label": "Typ"},
   {"path": "artikel", "label": "Artikel"},

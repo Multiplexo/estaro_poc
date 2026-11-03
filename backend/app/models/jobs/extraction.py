@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
-INQUIRY_EXTRACTION_SCHEMA_VERSION = 3
+INQUIRY_EXTRACTION_SCHEMA_VERSION = 4
 
 
 class CitationBBox(BaseModel):
@@ -39,6 +39,13 @@ class ExtractionStatus(StrEnum):
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+
+
+ACTIVE_JOB_STATUSES = frozenset({ExtractionStatus.QUEUED, ExtractionStatus.RUNNING})
+
+
+class ExtractionQueueUnavailable(RuntimeError):
+    pass
 
 
 class ExtractionJobStatus(BaseModel):
@@ -103,6 +110,16 @@ class ExtractedField(ExtractionSchema):
             "null, wenn die Angabe in den Quellen fehlt."
         ),
     )
+    confidence: float = Field(
+        default=0.0,
+        ge=0,
+        le=1,
+        description=(
+            "Sicherheit von 0 bis 1, dass Wert, Status und Zuordnung durch die "
+            "Quellen korrekt belegt sind. Bei missing die Sicherheit, dass die "
+            "Angabe fehlt. 0 bei ungeprüften Angaben."
+        ),
+    )
     citations: list[Citation] = Field(
         max_length=8,
         description=(
@@ -125,6 +142,17 @@ class ExtractedField(ExtractionSchema):
             "Ein kurzer deutscher Satz zu fehlenden oder widersprüchlichen "
             "Angaben. Andernfalls null; keine Überlegungen ausgeben."
         ),
+    )
+
+
+class RecheckedField(ExtractionSchema):
+    field_id: str = Field(description="Unveränderte ID des zu prüfenden Felds.")
+    result: ExtractedField
+
+
+class FieldsRecheck(ExtractionSchema):
+    fields: list[RecheckedField] = Field(
+        description="Genau ein Prüfergebnis je angeforderter Feld-ID, auch bei missing."
     )
 
 

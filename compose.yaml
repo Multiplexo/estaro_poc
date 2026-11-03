@@ -13,7 +13,7 @@ services:
       timeout: 5s
       retries: 10
 
-  extraction_worker:
+  extraction_worker: &backend_worker
     build: ./backend
     restart: unless-stopped
     env_file: .env
@@ -30,6 +30,10 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+
+  deletion_scheduler:
+    <<: *backend_worker
+    command: ["/app/.venv/bin/celery", "-A", "app.workers.celery_app:celery_app", "beat", "--loglevel=info", "--schedule=/tmp/celerybeat-schedule"]
 
   postgres:
     image: postgres:18-alpine

@@ -1,13 +1,24 @@
 """Redis transports tasks; PostgreSQL owns application job status."""
 
+from uuid import UUID
+
 from celery import Celery
+from fastapi.concurrency import run_in_threadpool
+from kombu.exceptions import OperationalError
+from redis.exceptions import RedisError
 
 from app.config import get_settings
+from app.models.jobs.extraction import ExtractionQueueUnavailable
+from app.models.jobs.matching import MatchingQueueUnavailable
 
 celery_app = Celery(
     "estaro",
     broker=get_settings().CELERY_BROKER_URL,
-    include=["app.workers.extraction_tasks"],
+    include=[
+        "app.workers.extraction_tasks",
+        "app.workers.matching_tasks",
+        "app.workers.cleanup_tasks",
+    ],
 )
 celery_app.conf.update(
     task_default_queue="extraction",
@@ -22,4 +33,38 @@ celery_app.conf.update(
     worker_hijack_root_logger=False,
     worker_redirect_stdouts=False,
     timezone="UTC",
+    beat_schedule={
+        "inquiry_cleanup": {
+            "task": "inquiry.cleanup",
+            "schedule": 60.0,
+            "options": {"queue": "extraction"},
+        }
+    },
 )
+
+
+async def publish_matching(job_id: UUID) -> None:
+    try:
+        await run_in_threadpool(
+            celery_app.send_task,
+            "matching.run",
+            args=[str(job_id)],
+            queue="extraction",
+            retry=False,
+        )
+    except (OperationalError, RedisError, OSError) as exc:
+        raise MatchingQueueUnavailable("Matching queue unavailable") from exc
+
+
+async def publish_extraction(job_id: UUID) -> None:
+    try:
+        await run_in_threadpool(
+            celery_app.send_task,
+            "extraction.run",
+            args=[str(job_id)],
+            task_id=str(job_id),
+            queue="extraction",
+            retry=False,
+        )
+    except (OperationalError, RedisError, OSError) as exc:
+        raise ExtractionQueueUnavailable("Extraction queue unavailable") from exc

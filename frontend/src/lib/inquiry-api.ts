@@ -32,6 +32,7 @@ function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse): 
   const documentsById = new Map(inquiry.documents.map((document) => [document.id, document]))
   const field = (value: ExtractedField | undefined): VerifiedField => ({
     value: value?.value ?? null, status: value?.status ?? 'missing', note: value?.note,
+    confidence: value?.confidence ?? 0,
     sources: (value?.citations ?? []).map((citation) => ({
       document_id: citation.document_id,
       filename: documentsById.get(citation.document_id)?.filename ?? 'Dokument',

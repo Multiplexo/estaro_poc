@@ -57,25 +57,28 @@ class MinioService:
             logger.exception("inquiry_file_url_failed", source_key=source_key)
             raise
 
-    async def upload_inquiry_file(self, inquiry_id: UUID, file: UploadFile) -> str:
+    async def validate_pdf(self, file: UploadFile) -> None:
         if file.content_type != "application/pdf":
             raise ValueError("File must have content type application/pdf")
         if file.size is None or file.size <= 0:
             raise ValueError("PDF file must not be empty")
+        await file.seek(0)
+        signature = await file.read(5)
+        await file.seek(0)
+        if signature != b"%PDF-":
+            raise ValueError("File must contain a PDF document")
 
-        object_name = str(inquiry_id)
+    async def upload_inquiry_file(self, document_id: UUID, file: UploadFile) -> str:
+        object_name = str(document_id)
         try:
-            await file.seek(0)
-            signature = await file.read(5)
-            await file.seek(0)
-            if signature != b"%PDF-":
-                raise ValueError("File must contain a PDF document")
+            await self.validate_pdf(file)
+            if file.size is None:
+                raise ValueError("PDF file size must be known")
             await run_in_threadpool(self._upload_file, object_name, file, file.size)
         except (MinioException, HTTPError, OSError):
-            logger.exception("inquiry_file_upload_failed", inquiry_id=object_name)
+            logger.exception("inquiry_file_upload_failed", document_id=object_name)
             raise
-
-        logger.info("inquiry_file_uploaded", inquiry_id=object_name)
+        logger.info("inquiry_file_uploaded", document_id=object_name)
         return object_name
 
     async def get_inquiry_file(self, source_key: str) -> bytes:

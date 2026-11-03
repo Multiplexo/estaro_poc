@@ -90,3 +90,4 @@ Before modifying code:
 ## Rules 
 - only add tests if asked
 - only documentation if asked
+- dont run the program

@@ -7,11 +7,11 @@ type DetailRow = [label: string, value: string | null | undefined]
 function DetailSection({ title, rows }: { title: string; rows: DetailRow[] }) {
   const { t } = useTranslation()
   return <section className="space-y-3">
-    <h4 className="text-sm font-semibold text-slate-950">{title}</h4>
+    <h4 className="text-sm font-semibold text-foreground">{title}</h4>
     <dl className="space-y-2.5 text-sm">
       {rows.map(([label, value]) => <div key={label} className="grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-4">
-        <dt className="text-slate-500">{label}</dt>
-        <dd className="min-w-0 break-words whitespace-pre-wrap text-slate-900">{value || <span className="text-slate-400" aria-label={t('common.notStored')}>—</span>}</dd>
+        <dt className="text-muted-foreground">{label}</dt>
+        <dd className="min-w-0 break-words whitespace-pre-wrap text-foreground">{value || <span className="text-muted-foreground" aria-label={t('common.notStored')}>—</span>}</dd>
       </div>)}
     </dl>
   </section>
@@ -35,16 +35,16 @@ function ArticleInformation({ candidate }: { candidate: ArticleDetail }) {
       [t('masterData.salesUnit'), candidate.sales_unit_name ?? candidate.sales_unit_code], [t('masterData.weight'), `${decimal(candidate.weight_kg)} kg`],
       [t('masterData.batchRequirement'), candidate.batch_requirement],
     ]} />
-    <details className="group rounded-lg border border-slate-200 px-4">
-      <summary className="cursor-pointer py-3 text-sm font-medium text-slate-700">{t('masterData.more')}</summary>
+    <details className="group rounded-lg border px-4">
+      <summary className="cursor-pointer py-3 text-sm font-medium text-foreground">{t('masterData.more')}</summary>
       <div className="space-y-3 pb-4"><DetailSection title={t('masterData.logistics')} rows={[
         [t('masterData.matchcode'), candidate.matchcode], [t('masterData.quantityCalculation'), candidate.quantity_calculation_name ?? candidate.quantity_calculation_code],
         [t('masterData.batchSelection'), candidate.batch_selection_name ?? candidate.batch_selection_code], [t('masterData.storage'), candidate.main_storage_location],
         [t('masterData.supplier'), candidate.main_supplier_code], [t('masterData.commodity'), candidate.commodity_code],
         [t('masterData.netMass'), candidate.intrastat_net_mass_kg ? `${decimal(candidate.intrastat_net_mass_kg)} kg` : null],
-      ]} />{candidate.has_memo ? <p className="text-xs text-slate-500">{t('masterData.memo')}</p> : null}</div>
+      ]} />{candidate.has_memo ? <p className="text-xs text-muted-foreground">{t('masterData.memo')}</p> : null}</div>
     </details>
-    <p className="text-xs leading-relaxed text-slate-500">{t('masterData.technicalHint')}</p>
+    <p className="text-xs leading-relaxed text-muted-foreground">{t('masterData.technicalHint')}</p>
   </>
 }
 
@@ -59,8 +59,8 @@ function CustomerInformation({ candidate }: { candidate: CustomerDetail }) {
       [t('masterData.paymentTerms'), candidate.payment_terms_name ?? candidate.payment_terms_code], [t('masterData.currency'), candidate.currency_name ?? candidate.currency_code],
       [t('masterData.customerGroup'), candidate.customer_group_name],
     ]} />
-    <details className="rounded-lg border border-slate-200 px-4">
-      <summary className="cursor-pointer py-3 text-sm font-medium text-slate-700">{t('masterData.more')}</summary>
+    <details className="rounded-lg border px-4">
+      <summary className="cursor-pointer py-3 text-sm font-medium text-foreground">{t('masterData.more')}</summary>
       <div className="pb-4"><DetailSection title={t('masterData.administration')} rows={[
         [t('masterData.matchcode'), candidate.matchcode], [t('masterData.priceList'), candidate.price_list_name ?? candidate.price_list_code],
         [t('masterData.discountList'), candidate.discount_list_name ?? candidate.discount_list_code], [t('masterData.language'), candidate.language_name ?? candidate.language_code],

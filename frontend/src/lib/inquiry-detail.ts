@@ -1,4 +1,4 @@
-import { inquirySchemaFields } from './inquiry-schema'
+import { inquirySchemaFields, type InquiryFieldPath } from './inquiry-schema'
 import type { InquiryData } from './generated/Api'
 import type { AnalysisResponse, InquiryResponse, ReadingSource } from './inquiry-models'
 import { analysisFields, customerIdentityKinds, itemFieldKinds } from './inquiry-analysis'
@@ -29,14 +29,18 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
   const result = analysis.extraction
   const review = reviewDraft(analysis.review)
   const fields = result ? analysisFields(result) : []
+  const extractionValues = new Map(fields.map(({ id, field }) => [id, field.value?.trim() || null]))
+  extractionValues.set('document_number', extractionValues.get('document_number') || extractionValues.get('inquiry_number') || null)
+  extractionValues.set('data:kundeninformationen.zusatz', [extractionValues.get('contact_email'), extractionValues.get('contact_phone')].filter(Boolean).join('\n') || null)
   const evaluation = result ? createInquiryEvaluation(result, fields) : undefined
   const summary = evaluation?.summary(review)
   const values = new Map(fields.map((entry) => [entry.id, reviewedField(entry, review).value]))
   const value = (id: string) => values.get(id)?.trim() || null
+  const storedValue = (stored: string | null | undefined, id: string) => id in review.fields ? value(id) : stored ?? value(id)
   const data: InquiryData = structuredClone(inquiry.daten ?? {})
   if (result) {
-    data.kundeninformationen = { ...data.kundeninformationen, name: value('customer'), kunde: value('customer_number'), ansprechpartner: value('contact_name'), zusatz: [value('contact_email'), value('contact_phone')].filter(Boolean).join('\n') || null,
-      ort: { ...data.kundeninformationen?.ort, stadt: value('customer_location') } }
+    data.kundeninformationen = { ...data.kundeninformationen, name: storedValue(data.kundeninformationen?.name, 'customer'), kunde: storedValue(data.kundeninformationen?.kunde, 'customer_number'), ansprechpartner: value('contact_name'), zusatz: [value('contact_email'), value('contact_phone')].filter(Boolean).join('\n') || null,
+      ort: { ...data.kundeninformationen?.ort, stadt: storedValue(data.kundeninformationen?.ort?.stadt, 'customer_location') } }
     data.beleginformationen = { ...data.beleginformationen, lieferdatum: value('delivery_date') }
     data.belegdetails = { ...data.belegdetails, ihreBelegnummer: value('document_number') || value('inquiry_number'), belegZu: value('reference_number') }
     data.angebotsdetails = { ...data.angebotsdetails, angebotGueltigBis: value('offer_valid_until') }
@@ -44,9 +48,9 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
   }
   if (result) data.positionen = result.items.map((_, index) => ({
     ...data.positionen?.[index],
-    bezeichnung: value(`item-${index}-article`), bezeichnung2: value(`item-${index}-material`),
+    bezeichnung: storedValue(data.positionen?.[index]?.bezeichnung, `item-${index}-article`), bezeichnung2: storedValue(data.positionen?.[index]?.bezeichnung2, `item-${index}-material`),
     dimensionstext: value(`item-${index}-dimensions`), menge: value(`item-${index}-quantity`),
-    mengeneinheit: value(`item-${index}-unit`), langtext: value(`item-${index}-requirements`),
+    mengeneinheit: storedValue(data.positionen?.[index]?.mengeneinheit, `item-${index}-unit`), langtext: value(`item-${index}-requirements`),
     zusatzinfos: value(`item-${index}-alternatives`), zeugnis: value(`item-${index}-certificates`),
   }))
   for (const [id, field] of Object.entries(review.fields)) {
@@ -59,7 +63,7 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
     }
     target[parts.at(-1)!] = field.value || null
   }
-  const sections = new Map<string, { id: string; label: string; value: string | null }[]>()
+  const sections = new Map<string, { id: InquiryFieldPath; label: string; value: string | null }[]>()
   for (const definition of inquirySchemaFields) {
     let current: unknown = data
     for (const part of definition.path.split('.')) current = current && typeof current === 'object' ? (current as Record<string, unknown>)[part] : null
@@ -69,7 +73,9 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
   }
   const positions = result?.items.map((_, index) => ({
     number: index + 1,
-    fields: itemFieldKinds.map((kind) => ({ kind, value: value(`item-${index}-${kind}`) })),
+    fields: itemFieldKinds.map((kind) => ({ kind, value: kind === 'article' ? data.positionen?.[index]?.bezeichnung ?? null
+      : kind === 'material' ? data.positionen?.[index]?.bezeichnung2 ?? null
+        : kind === 'unit' ? data.positionen?.[index]?.mengeneinheit ?? null : value(`item-${index}-${kind}`) })),
     status: summary!.positionStatuses[index],
   })) ?? []
   const customerUnchanged = customerIdentityKinds.every((kind) => value(kind) === (result?.[kind]?.value?.trim() || null))
@@ -80,12 +86,14 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
     : suggestions?.status === 'matched' && suggestions.candidates?.length === 1 ? suggestions.candidates[0].id : undefined)
   return {
     positionData: data.positionen ?? [],
+    extractionValues,
+    matchingProvenance: data.matching_provenance ?? {},
     sections: [...sections].map(([label, fields]) => ({ label, fields })),
     title: emailHeader(email, 'subject') || [value('customer'), value('inquiry_number') || value('reference_number')].filter(Boolean).join(' · ') || inquiry.documents.find((document) => !document.parent_document_id)?.filename || 'Anfrage',
-    emails, customerId, customerName: value('customer'), sender: emailHeader(email, 'sender'),
+    emails, customerId, customerName: data.kundeninformationen?.name ?? null, sender: emailHeader(email, 'sender'),
     reference: value('reference_number'), inquiryNumber: value('inquiry_number'), documentNumber: value('document_number'),
     offerValidUntil: value('offer_valid_until'), deliveryDate: value('delivery_date'), requirements: value('requirements'),
-    customerNumber: value('customer_number'), customerLocation: value('customer_location'),
+    customerNumber: data.kundeninformationen?.kunde ?? null, customerLocation: data.kundeninformationen?.ort?.stadt ?? null,
     contactName: value('contact_name'), contactEmail: value('contact_email'), contactPhone: value('contact_phone'),
     reviewStatus: summary?.reviewStatus ?? 'new', positions, confirmedPositions: summary?.confirmedPositions ?? 0,
     extractionNotice: extractionNotice(inquiry, analysis), matchingStatus: result?.matching?.status,

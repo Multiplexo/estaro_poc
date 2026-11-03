@@ -527,6 +527,14 @@ export interface ExtractedField {
    */
   value: string | null;
   /**
+   * Confidence
+   * Sicherheit von 0 bis 1, dass Wert, Status und Zuordnung durch die Quellen korrekt belegt sind. Bei missing die Sicherheit, dass die Angabe fehlt. 0 bei ungeprüften Angaben.
+   * @min 0
+   * @max 1
+   * @default 0
+   */
+  confidence?: number;
+  /**
    * Citations
    * Mindestens ein wörtlicher Beleg für jeden vorhandenen Wert. Bei Widersprüchen alle abweichenden Quellenangaben belegen. Nur bei fehlenden Angaben leer lassen.
    * @maxItems 8
@@ -679,6 +687,18 @@ export interface InquiryData {
   angebotsdetails?: Angebotsdetails | null;
   /** Positionen */
   positionen?: InquiryPosition[] | null;
+  /** Matching Provenance */
+  matching_provenance?: Record<string, InquiryFieldMatch>;
+}
+
+/** InquiryFieldMatch */
+export interface InquiryFieldMatch {
+  origin?: "automatic" | "manual";
+  category: "customer" | "article";
+  entity_id: string;
+  number: string;
+  value: string;
+  original_value?: string | null;
 }
 
 /**

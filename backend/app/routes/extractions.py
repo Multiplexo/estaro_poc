@@ -1,48 +1,31 @@
-"""Upload inquiry PDFs and retrieve extraction job status."""
-
 from typing import Annotated
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from minio.error import MinioException
-from urllib3.exceptions import HTTPError
+from fastapi import APIRouter, Depends, File, UploadFile, status
 
-from app.dependencies import MinioServiceDep, get_extraction_service
-from app.models.api.extractions import ExtractionRequest, ExtractionResultUpdate
+from app.dependencies import (
+    get_extraction_service,
+    get_review_service,
+    get_upload_service,
+)
+from app.models.api.extractions import ExtractionResultUpdate
 from app.models.domain.inquiries import InquiryExtractionSnapshot
 from app.models.jobs.extraction import ExtractionJobStatus
+from app.services.domain.reviews import ExtractionReviewService
 from app.services.jobs.extractions import ExtractionService
+from app.services.jobs.uploads import ExtractionUploadService
 
 router = APIRouter()
 ServiceDep = Annotated[ExtractionService, Depends(get_extraction_service)]
+ReviewServiceDep = Annotated[ExtractionReviewService, Depends(get_review_service)]
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED, operation_id="extraction")
 async def submit_extraction(
     file: Annotated[UploadFile, File()],
-    service: ServiceDep,
-    minio: MinioServiceDep,
+    service: Annotated[ExtractionUploadService, Depends(get_upload_service)],
 ) -> ExtractionJobStatus:
-    document_id = uuid4()
-    try:
-        source_key = await minio.upload_inquiry_file(document_id, file)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
-        ) from exc
-    except (MinioException, HTTPError, OSError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="File storage unavailable",
-        ) from exc
-
-    return await service.submit(
-        ExtractionRequest(
-            source_key=source_key,
-            document_id=document_id,
-            filename=file.filename or "inquiry.pdf",
-        )
-    )
+    return await service.submit(file)
 
 
 @router.get("/{job_id}", operation_id="get_extraction_status")
@@ -54,13 +37,13 @@ async def get_extraction_status(
 
 @router.get("/{job_id}/result", operation_id="get_extraction_result")
 async def get_extraction_result(
-    job_id: UUID, service: ServiceDep
+    job_id: UUID, service: ReviewServiceDep
 ) -> InquiryExtractionSnapshot:
-    return await service.get_result(job_id)
+    return await service.get(job_id)
 
 
 @router.patch("/{job_id}/result", operation_id="update_extraction_result")
 async def update_extraction_result(
-    job_id: UUID, request: ExtractionResultUpdate, service: ServiceDep
+    job_id: UUID, request: ExtractionResultUpdate, service: ReviewServiceDep
 ) -> InquiryExtractionSnapshot:
-    return await service.update_result(job_id, request)
+    return await service.update(job_id, request)

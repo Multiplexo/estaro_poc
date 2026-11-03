@@ -27,10 +27,10 @@ function InquiryOverviewPage() {
           {detail?.customerName && detail.title !== detail.customerName ? <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{detail.title}</p> : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {inquiry.data ? <InquiryDetailActions inquiry={inquiry.data} /> : null}
           {detail ? <Button className="min-h-11 px-4" render={<Link to="/anfragen/$inquiryId/pruefung" params={{ inquiryId }} />}>
-            Extraktion prüfen<ArrowRightIcon aria-hidden="true" />
+            Zur Prüfung<ArrowRightIcon aria-hidden="true" />
           </Button> : null}
+          {inquiry.data ? <InquiryDetailActions inquiry={inquiry.data} /> : null}
         </div>
       </header>
       {inquiry.isError || analysis.isError ? <div role="alert" className="space-y-3 rounded-lg border border-destructive/30 p-4">

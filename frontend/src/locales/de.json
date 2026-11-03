@@ -26,6 +26,7 @@
     "inquiries": "Anfragen",
     "customers": "Kunden",
     "articles": "Artikel",
+    "rules": "Regeln",
     "settings": "Einstellungen",
     "management": "Verwaltung",
     "recent": "Neueste Anfragen",
@@ -131,6 +132,12 @@
     "leaveUnsaved": "Ihre Änderungen sind noch nicht gespeichert. Seite trotzdem verlassen?"
   },
   "matching": {
+    "manualAssignment": "Manuell zugeordnet",
+    "automaticAssignment": "Automatisch zugeordnet",
+    "automaticExtraction": "Automatisch durch KI aus der Anfrage extrahiert",
+    "extractionSource": "KI-Extraktion",
+    "customerSource": "Kundenstamm",
+    "articleSource": "Artikelstamm",
     "customers": "Kunden-Matching",
     "articles": "Artikel-Matching",
     "assignedMaster": "Zuordnung im Stamm",

@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class Ort(BaseModel):
@@ -114,6 +116,15 @@ class InquiryPosition(BaseModel):
     rabatt: str | None = None
 
 
+class InquiryFieldMatch(BaseModel):
+    origin: Literal["automatic", "manual"] = "automatic"
+    category: Literal["customer", "article"]
+    entity_id: str
+    number: str
+    value: str
+    original_value: str | None = None
+
+
 class InquiryData(BaseModel):
     kundeninformationen: Kundeninformationen | None = None
     beleginformationen: Beleginformationen | None = None
@@ -124,3 +135,4 @@ class InquiryData(BaseModel):
     preisUndSteuerbasis: PreisUndSteuerbasis | None = None
     angebotsdetails: Angebotsdetails | None = None
     positionen: list[InquiryPosition] | None = None
+    matching_provenance: dict[str, InquiryFieldMatch] = Field(default_factory=dict)

@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from sqlalchemy import func, or_
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -41,3 +42,31 @@ class CustomerRepository:
         )
         records = (await self.session.exec(statement)).all()
         return [record.to_model() for record in records]
+
+    async def search(self, query: str, limit: int = 15) -> list[Customer]:
+        query = query.strip()[:200]
+        if not query:
+            return []
+        text = func.concat_ws(
+            " ",
+            CustomerSchema.customer_number,
+            CustomerSchema.matchcode,
+            CustomerSchema.name,
+            CustomerSchema.name_addition,
+            CustomerSchema.city,
+            CustomerSchema.postal_code,
+        )
+        score = func.word_similarity(query, text)
+        statement = (
+            select(CustomerSchema)
+            .where(or_(score > 0.15, text.icontains(query, autoescape=True)))
+            .order_by(
+                (col(CustomerSchema.customer_number) == query).desc(),
+                score.desc(),
+                CustomerSchema.customer_number,
+            )
+            .limit(min(max(limit, 1), 30))
+        )
+        return [
+            record.to_model() for record in (await self.session.exec(statement)).all()
+        ]

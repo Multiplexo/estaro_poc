@@ -30,7 +30,7 @@ export function Upload() {
         <Plus aria-hidden="true" className="size-4" />Upload
       </Button>
       {state !== 'idle' ? (
-        <Suspense fallback={<p role="status">Upload wird geladen …</p>}>
+        <Suspense fallback={null}>
           <UploadDialog open={open} onOpenChange={setOpen} triggerRef={triggerRef} />
         </Suspense>
       ) : null}

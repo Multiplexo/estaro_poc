@@ -7,7 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from app.models.jobs.extraction import InquiryExtraction
 from app.pipelines.extraction.document_classification import document_classification
-from app.pipelines.extraction.extract import extract_inquiry
+from app.pipelines.extraction.extract import extract_inquiry, recheck_fields
 from app.pipelines.extraction.load import load_document
 from app.services.shared.minio import MinioService
 from app.services.shared.openai import OpenAIService
@@ -19,6 +19,8 @@ async def run_pipeline(
     openai: OpenAIService,
     report_progress: Callable[[str, int], Awaitable[None]],
     document_id: UUID,
+    confidence_threshold: float,
+    rules_prompt: str = "",
 ) -> InquiryExtraction:
     await report_progress("load", 0)
     document = await load_document(source_key, minio)
@@ -33,7 +35,19 @@ async def run_pipeline(
         classified,
         str(document_id),
         openai,
+        rules_prompt,
     )
     await report_progress("extract", 3)
+
+    await report_progress("recheck_fields", 3)
+    extraction = await recheck_fields(
+        classified,
+        str(document_id),
+        extraction,
+        openai,
+        confidence_threshold,
+        rules_prompt,
+    )
+    await report_progress("recheck_fields", 4)
 
     return extraction

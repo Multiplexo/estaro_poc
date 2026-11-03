@@ -1,6 +1,6 @@
 import { useTranslation } from '@/i18n'
 import { Link } from '@tanstack/react-router'
-import { FolderOpen, Package, UsersRound } from 'lucide-react'
+import { FolderOpen, ListChecks, Package, UsersRound } from 'lucide-react'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -14,6 +14,7 @@ import { useSidebarNavigation } from '@/hooks/use-sidebar-navigation'
 const managementLinks = [
   { titleKey: 'navigation.customers', to: '/kunden', icon: UsersRound },
   { titleKey: 'navigation.articles', to: '/artikel', icon: Package },
+  { titleKey: 'navigation.rules', to: '/regeln', icon: ListChecks },
 ] as const
 
 export function SidebarNavigation() {

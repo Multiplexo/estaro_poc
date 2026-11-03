@@ -5,6 +5,7 @@ from typing import Annotated
 
 import structlog
 from fastapi import Depends
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.logging import RichHandler
 
@@ -19,6 +20,9 @@ class Settings(BaseSettings):
     POSTGRES_MAX_OVERFLOW: int = 10
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    MATCHING_CONCURRENCY: int = Field(default=3, ge=1, le=10)
+    MATCHING_TIMEOUT_SECONDS: int = Field(default=600, ge=1, le=3600)
+    EXTRACTION_CONFIDENCE_THRESHOLD: float = Field(default=0.5, ge=0, le=1)
 
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_PUBLIC_ENDPOINT: str | None = None

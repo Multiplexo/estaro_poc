@@ -4,7 +4,13 @@ Run these commands from the repository root.
 
 ```sh
 uv --directory backend run alembic upgrade head
-uv run --project backend python backend/scripts/import-data.py
+
+# Import customer and article master data
+uv --directory backend run python -m scripts.import_data
+
+# Import document-derived rules
+uv --directory backend run python -m scripts.import_rules
+
 uv --directory backend run uvicorn app.main:app --reload
 
 # Local worker (separate terminal; PostgreSQL and Redis must be running)

@@ -15,7 +15,7 @@ export function ReviewArticle({ position, editor, matchingAvailable, disabled, o
   if (editor.onlyOpen && confirmed) return null
   return <ReviewSection id={position.sectionId} marker={String(index + 1).padStart(2, '0')} title={article || t('review.articleWithoutName')} description={[quantity, unit].filter(Boolean).join(' ') || t('review.noQuantity')} confirmed={confirmed}
     action={<ReviewGroupAction confirmed={confirmed} disabled={disabled} onConfirm={onConfirm} label={t('review.articleLabel', { number: index + 1 })} />}>
-    {matchingAvailable ? <InlineMatching kind="articles" selectedId={position.selectedId} suggestions={position.suggestions} initialSearch={article} onSelect={onSelect} /> : null}
     <ReviewFieldGroup fields={fields} editor={editor} />
+    {matchingAvailable ? <details className="border-t text-sm"><summary className="cursor-pointer px-5 py-3 text-muted-foreground">{t('matching.articles')}</summary><InlineMatching kind="articles" selectedId={position.selectedId} suggestions={position.suggestions} initialSearch={article} onSelect={onSelect} /></details> : null}
   </ReviewSection>
 }

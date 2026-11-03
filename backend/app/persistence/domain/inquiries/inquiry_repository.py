@@ -1,5 +1,6 @@
 """Inquiry queries using the shared database service."""
 
+from datetime import UTC, datetime
 from typing import cast
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.models.domain.extraction_review import ExtractionReview
 from app.models.domain.inquiries import (
     Inquiry,
     InquiryDocument,
@@ -19,6 +21,7 @@ from app.models.domain.inquiries import (
     InquiryOverviewPage,
     InquiryOverviewQuery,
 )
+from app.models.domain.inquiry_data import InquiryData
 from app.models.jobs.extraction import (
     CUSTOMER_FIELD_NAMES,
     INQUIRY_FIELD_NAMES,
@@ -31,6 +34,7 @@ from app.persistence.domain.inquiries.schema.inquiry import (
 from app.persistence.domain.inquiries.schema.inquiry_extraction import (
     InquiryExtraction as ExtractionSchema,
 )
+from app.persistence.jobs.extractions.schema.extraction_job import ExtractionJob
 
 logger = structlog.get_logger(__name__)
 
@@ -196,9 +200,8 @@ class InquiryRepository:
             await self.session.exec(
                 delete(InquirySchema).where(col(InquirySchema.id) == inquiry_id)
             )
-            await self.session.commit()
+            await self.session.flush()
         except SQLAlchemyError:
-            await self.session.rollback()
             logger.exception("inquiry_delete_failed", inquiry_id=str(inquiry_id))
             raise
 
@@ -288,3 +291,121 @@ class InquiryRepository:
                 "inquiry_extraction_list_failed", inquiry_id=str(inquiry_id)
             )
             raise
+
+    async def get_record(
+        self, inquiry_id: UUID, *, for_update: bool = False
+    ) -> InquirySchema | None:
+        return await self.session.get(
+            InquirySchema,
+            inquiry_id,
+            with_for_update=for_update,
+            populate_existing=True,
+        )
+
+    async def save(self, inquiry: InquirySchema) -> None:
+        self.session.add(inquiry)
+        await self.session.flush()
+
+    async def save_document(self, document: DocumentSchema) -> None:
+        self.session.add(document)
+        await self.session.flush()
+
+    async def get_extraction(
+        self, job_id: UUID, *, for_update: bool = False
+    ) -> ExtractionSchema | None:
+        statement = (
+            select(ExtractionSchema)
+            .where(ExtractionSchema.job_id == job_id)
+            .execution_options(populate_existing=True)
+        )
+        if for_update:
+            statement = statement.with_for_update()
+        return (await self.session.exec(statement)).one_or_none()
+
+    async def latest_extraction_id(self, inquiry_id: UUID) -> UUID | None:
+        statement = (
+            select(ExtractionSchema.id)
+            .where(ExtractionSchema.inquiry_id == inquiry_id)
+            .order_by(
+                col(ExtractionSchema.created_at).desc(), col(ExtractionSchema.id).desc()
+            )
+            .limit(1)
+        )
+        return (await self.session.exec(statement)).one_or_none()
+
+    async def save_extraction(self, snapshot: ExtractionSchema) -> None:
+        self.session.add(snapshot)
+        await self.session.flush()
+
+    async def update_review(self, job_id: UUID, review: ExtractionReview) -> None:
+        record = await self.get_extraction(job_id)
+        if record is None:
+            raise ValueError("Extraction result not found")
+        record.review = review.model_dump(mode="json")
+        await self.save_extraction(record)
+
+    async def update_data(self, inquiry_id: UUID, data: InquiryData) -> None:
+        record = await self.get_record(inquiry_id)
+        if record is None:
+            raise ValueError("Inquiry not found")
+        record.daten = data.model_dump(mode="json")
+        await self.save(record)
+
+    async def pending_deletions(self, limit: int = 100) -> list[UUID]:
+        statement = (
+            select(InquirySchema.id)
+            .where(
+                col(InquirySchema.deletion_requested_at).is_not(None),
+                or_(
+                    col(InquirySchema.deletion_retry_at).is_(None),
+                    col(InquirySchema.deletion_retry_at) <= datetime.now(UTC),
+                ),
+            )
+            .order_by(col(InquirySchema.deletion_retry_at), col(InquirySchema.id))
+            .limit(limit)
+        )
+        return list((await self.session.exec(statement)).all())
+
+    async def has_extraction_jobs(self, inquiry_id: UUID) -> bool:
+        statement = select(
+            select(ExtractionJob.id)
+            .where(ExtractionJob.inquiry_id == inquiry_id)
+            .exists()
+        )
+        return (await self.session.exec(statement)).one()
+
+    async def uploads_without_jobs(
+        self, created_before: datetime, limit: int = 100
+    ) -> list[UUID]:
+        has_jobs = (
+            select(ExtractionJob.id)
+            .where(ExtractionJob.inquiry_id == InquirySchema.id)
+            .exists()
+        )
+        has_document = (
+            select(DocumentSchema.id)
+            .where(
+                DocumentSchema.inquiry_id == InquirySchema.id,
+                col(DocumentSchema.source_key).is_not(None),
+            )
+            .exists()
+        )
+        has_snapshot = (
+            select(ExtractionSchema.id)
+            .where(ExtractionSchema.inquiry_id == InquirySchema.id)
+            .exists()
+        )
+        statement = (
+            select(InquirySchema.id)
+            .where(
+                col(InquirySchema.created_at) < created_before,
+                col(InquirySchema.deletion_requested_at).is_(None),
+                has_document,
+                ~has_jobs,
+                ~has_snapshot,
+                col(InquirySchema.daten) == {},
+            )
+            .order_by(col(InquirySchema.created_at), col(InquirySchema.id))
+            .limit(limit)
+        )
+        return list((await self.session.exec(statement)).all())

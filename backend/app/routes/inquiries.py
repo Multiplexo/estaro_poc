@@ -1,16 +1,16 @@
-"""Inquiry endpoints."""
-
 from typing import Annotated
 from urllib.parse import quote
 from uuid import UUID
 
-import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import Response
-from minio.error import MinioException, S3Error
-from urllib3.exceptions import HTTPError
 
-from app.dependencies import MinioServiceDep, get_inquiry_repository
+from app.dependencies import (
+    get_document_service,
+    get_extraction_service,
+    get_inquiry_repository,
+    get_inquiry_service,
+)
 from app.models.api.documents import DocumentUrl
 from app.models.domain.inquiries import (
     Inquiry,
@@ -18,20 +18,24 @@ from app.models.domain.inquiries import (
     InquiryOverviewPage,
     InquiryOverviewQuery,
 )
+from app.models.jobs.extraction import ExtractionJobStatus
 from app.models.shared.pagination import Pagination
 from app.persistence.domain.inquiries.inquiry_repository import InquiryRepository
+from app.services.domain.documents import InquiryDocumentService
+from app.services.domain.inquiries import InquiryService
+from app.services.jobs.extractions import ExtractionService
 
 router = APIRouter()
-logger = structlog.get_logger(__name__)
 RepositoryDep = Annotated[InquiryRepository, Depends(get_inquiry_repository)]
+ServiceDep = Annotated[InquiryService, Depends(get_inquiry_service)]
+DocumentServiceDep = Annotated[InquiryDocumentService, Depends(get_document_service)]
+ExtractionServiceDep = Annotated[ExtractionService, Depends(get_extraction_service)]
 
 
 @router.get("", response_model=list[Inquiry], operation_id="list_inquiries")
 async def list_inquiries(
-    repository: RepositoryDep,
-    pagination: Annotated[Pagination, Depends()],
+    repository: RepositoryDep, pagination: Annotated[Pagination, Depends()]
 ) -> list[Inquiry]:
-    """Return a page of inquiries."""
     return await repository.list_inquiries(
         offset=pagination.offset, limit=pagination.limit
     )
@@ -39,22 +43,14 @@ async def list_inquiries(
 
 @router.get("/overview", operation_id="list_inquiry_overviews")
 async def list_inquiry_overviews(
-    repository: RepositoryDep,
-    query: Annotated[InquiryOverviewQuery, Depends()],
+    repository: RepositoryDep, query: Annotated[InquiryOverviewQuery, Depends()]
 ) -> InquiryOverviewPage:
     return await repository.list_overviews(query)
 
 
 @router.get("/{inquiry_id}", response_model=Inquiry, operation_id="get_inquiry_by_id")
-async def get_inquiry_by_id(inquiry_id: UUID, repository: RepositoryDep) -> Inquiry:
-    """Return an inquiry by ID."""
-    inquiry = await repository.get_inquiry(inquiry_id)
-    if inquiry is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Inquiry not found",
-        )
-    return inquiry
+async def get_inquiry_by_id(inquiry_id: UUID, service: ServiceDep) -> Inquiry:
+    return await service.get(inquiry_id)
 
 
 @router.delete(
@@ -63,39 +59,36 @@ async def get_inquiry_by_id(inquiry_id: UUID, repository: RepositoryDep) -> Inqu
     response_class=Response,
     operation_id="delete_inquiry",
 )
-async def delete_inquiry(
-    inquiry_id: UUID,
-    repository: RepositoryDep,
-    minio: MinioServiceDep,
-) -> Response:
-    inquiry = await get_inquiry_by_id(inquiry_id, repository)
-    source_keys = {
-        document.source_key for document in inquiry.documents if document.source_key
-    }
-    try:
-        for source_key in sorted(source_keys):
-            await minio.delete_inquiry_file(source_key)
-    except (MinioException, HTTPError, OSError) as exc:
-        logger.exception("inquiry_document_cleanup_failed", inquiry_id=str(inquiry_id))
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="File storage unavailable; retry inquiry deletion",
-        ) from exc
-
-    await repository.delete_inquiry(inquiry_id)
-    logger.info("inquiry_deleted", inquiry_id=str(inquiry_id))
+async def delete_inquiry(inquiry_id: UUID, service: ServiceDep) -> Response:
+    await service.delete(inquiry_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{inquiry_id}/extraction-job", operation_id="get_inquiry_extraction_job")
+async def get_inquiry_extraction_job(
+    inquiry_id: UUID, inquiries: ServiceDep, service: ExtractionServiceDep
+) -> ExtractionJobStatus | None:
+    await inquiries.get(inquiry_id)
+    return await service.get_latest(inquiry_id)
+
+
+@router.post(
+    "/{inquiry_id}/extractions",
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="restart_inquiry_extraction",
+)
+async def restart_inquiry_extraction(
+    inquiry_id: UUID, service: ExtractionServiceDep
+) -> ExtractionJobStatus:
+    return await service.restart(inquiry_id)
 
 
 @router.get("/{inquiry_id}/extractions", operation_id="list_inquiry_extractions")
 async def list_inquiry_extractions(
-    inquiry_id: UUID,
-    repository: RepositoryDep,
-    pagination: Annotated[Pagination, Depends()],
+    inquiry_id: UUID, service: ServiceDep, pagination: Annotated[Pagination, Depends()]
 ) -> list[InquiryExtractionSnapshot]:
-    await get_inquiry_by_id(inquiry_id, repository)
-    return await repository.list_extractions(
-        inquiry_id, offset=pagination.offset, limit=pagination.limit
+    return await service.list_extractions(
+        inquiry_id, pagination.offset, pagination.limit
     )
 
 
@@ -105,33 +98,11 @@ async def list_inquiry_extractions(
     response_model=DocumentUrl,
 )
 async def get_inquiry_document_url(
-    inquiry_id: UUID,
-    document_id: UUID,
-    repository: RepositoryDep,
-    minio: MinioServiceDep,
-    response: Response,
+    inquiry_id: UUID, document_id: UUID, service: DocumentServiceDep, response: Response
 ) -> DocumentUrl:
-    inquiry = await get_inquiry_by_id(inquiry_id, repository)
-    document = next(
-        (item for item in inquiry.documents if item.id == document_id), None
-    )
-    if document is None or not document.source_key:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    try:
-        url = await minio.get_inquiry_file_url(
-            document.source_key, document.filename, document.file_type.media_type
-        )
-    except (MinioException, HTTPError, OSError) as exc:
-        logger.exception(
-            "inquiry_document_url_failed",
-            inquiry_id=str(inquiry_id),
-            document_id=str(document_id),
-        )
-        raise HTTPException(status_code=503, detail="File storage unavailable") from exc
-
+    result = await service.get_url(inquiry_id, document_id)
     response.headers["Cache-Control"] = "no-store"
-    return DocumentUrl(url=url)
+    return result
 
 
 @router.get(
@@ -149,30 +120,10 @@ async def get_inquiry_document_url(
     },
 )
 async def download_inquiry_document(
-    inquiry_id: UUID,
-    document_id: UUID,
-    repository: RepositoryDep,
-    minio: MinioServiceDep,
+    inquiry_id: UUID, document_id: UUID, service: DocumentServiceDep
 ) -> Response:
-    inquiry = await get_inquiry_by_id(inquiry_id, repository)
-    document = next(
-        (item for item in inquiry.documents if item.id == document_id), None
-    )
-    if document is None or not document.source_key:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    try:
-        content = await minio.get_inquiry_file(document.source_key)
-    except (MinioException, HTTPError, OSError) as exc:
-        logger.exception(
-            "inquiry_document_download_failed",
-            inquiry_id=str(inquiry_id),
-            document_id=str(document_id),
-        )
-        if isinstance(exc, S3Error) and exc.code in {"NoSuchKey", "NoSuchObject"}:
-            raise HTTPException(status_code=404, detail="Document not found") from exc
-        raise HTTPException(status_code=503, detail="File storage unavailable") from exc
-
+    document = await service.get(inquiry_id, document_id)
+    content = await service.download(document)
     return Response(
         content=content,
         media_type=document.file_type.media_type,

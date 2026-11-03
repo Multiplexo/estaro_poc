@@ -6,6 +6,7 @@ import structlog
 from sqlalchemy import URL, Connection, pool
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.schema import SchemaItem
 from sqlmodel import SQLModel
 
 import app.persistence  # noqa: F401 - Register SQLModel tables for autogeneration.
@@ -25,6 +26,24 @@ database_url = URL.create(
 )
 
 
+def include_object(
+    schema_object: SchemaItem,
+    name: str | None,
+    object_type: str,
+    reflected: bool,
+    compare_to: SchemaItem | None,
+) -> bool:
+    # LangGraph migrates its own memory tables through AsyncPostgresStore.setup.
+    if object_type == "table" and reflected and compare_to is None:
+        return name not in {
+            "store",
+            "store_migrations",
+            "store_vectors",
+            "vector_migrations",
+        }
+    return True
+
+
 def run_migrations_offline() -> None:
     """Generate PostgreSQL SQL without connecting to the database."""
     context.configure(
@@ -32,6 +51,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -39,7 +59,11 @@ def run_migrations_offline() -> None:
 
 def run_migrations(connection: Connection) -> None:
     """Run Alembic operations within the async connection's sync bridge."""
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

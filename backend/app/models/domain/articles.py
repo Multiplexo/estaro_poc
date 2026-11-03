@@ -105,3 +105,19 @@ class Article(BaseModel):
     is_exotic: bool | None = Field(
         default=None, description="Whether the article is marked as exotic."
     )
+
+
+class ArticleSearchFilters(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    article_number: str | None = None
+    variant: str | None = None
+    matchcode: str | None = None
+    description_1: str | None = None
+    description_2: str | None = None
+    article_group_code: str | None = None
+    manufacturer: str | None = None
+    sales_unit_code: str | None = None
+    is_active: bool | None = None
+    is_saleable: bool | None = None
+    stock_quantity_min: float | None = Field(default=None, ge=0)

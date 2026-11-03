@@ -4,6 +4,7 @@ import { useApi } from './use-api'
 import type { ApiClient } from '@/lib/api'
 import { loadAll } from '@/lib/inquiry-api'
 import type { MasterDataCandidate } from '@/lib/master-data-candidate'
+import { filterMasterData } from '@/lib/master-data'
 
 export type MasterDataKind = 'customers' | 'articles'
 export const candidatePageSize = 10
@@ -19,7 +20,7 @@ export function candidateQuery(api: ApiClient, kind: MasterDataKind, id?: string
   }
 }
 
-export function useMasterDataSearch(kind: MasterDataKind, initialSearch: string) {
+export function useMasterDataSearch(kind: MasterDataKind, initialSearch: string, { searchOnDemand = false }: { searchOnDemand?: boolean } = {}) {
   const api = useApi()
   const [search, setSearch] = useState(initialSearch.slice(0, 200))
   const [term, setTerm] = useState(search.trim())
@@ -28,17 +29,14 @@ export function useMasterDataSearch(kind: MasterDataKind, initialSearch: string)
     const timer = window.setTimeout(() => setTerm(search.trim()), 250)
     return () => window.clearTimeout(timer)
   }, [search])
-  const selectResults = useCallback((items: MasterDataCandidate[]) => {
-    const text = term.toLocaleLowerCase('de-DE')
-    return items.filter((item) => Object.values(item).some((value) =>
-      typeof value === 'string' && value.toLocaleLowerCase('de-DE').includes(text)))
-  }, [term])
+  const selectResults = useCallback((items: MasterDataCandidate[]) => filterMasterData(items, term), [term])
   const results = useQuery({
     queryKey: [kind],
     queryFn: ({ signal }) => loadAll<MasterDataCandidate>((params) => kind === 'customers'
       ? api.customers.listCustomers(params, { signal })
       : api.articles.listArticles(params, { signal })),
     staleTime: 60_000,
+    enabled: !searchOnDemand || term.length > 0,
     select: selectResults,
   })
   const data = useMemo(() => results.data ? {

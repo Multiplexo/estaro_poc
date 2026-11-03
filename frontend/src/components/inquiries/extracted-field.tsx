@@ -35,7 +35,7 @@ export const ExtractedField = memo(function ExtractedField({ entry, highlights, 
     onFocus, 'aria-describedby': status ? `status-${id}` : undefined, placeholder: t('common.notSpecified'),
     className: `h-auto min-h-8 max-h-40 resize-none scroll-mt-8 scroll-mb-8 rounded-md bg-background px-2 py-1.5 text-base shadow-none md:text-sm ${keyField ? 'font-medium' : ''}`,
   }
-  return <div onClick={focusFieldFromCard} className={`min-w-0 cursor-text rounded-md border bg-card p-2 ${wideKinds.has(kind) ? '@min-[24rem]:col-span-2' : ''} ${warning ? 'border-amber-300' : 'border-border'} ${selected ? 'ring-1 ring-ring' : ''}`}>
+  return <div onClick={focusFieldFromCard} className={`min-w-0 cursor-text rounded-lg border p-2 ${wideKinds.has(kind) ? '@min-[24rem]:col-span-2' : ''} ${warning ? 'border-amber-300 bg-amber-50/40 dark:bg-amber-950/20' : 'border-transparent'} ${selected ? 'bg-muted/30 ring-1 ring-ring' : ''}`}>
     <div className="mb-1 flex min-h-7 items-center justify-between gap-1">
       <label htmlFor={`review-${id}`} className="min-w-0 text-xs font-medium text-muted-foreground">{label}</label>
       <span role={review.confirmed ? 'status' : undefined} className="sr-only">{review.confirmed ? t('common.checked') : warning ? t('common.pleaseCheck') : t('common.open')}</span>
@@ -46,7 +46,7 @@ export const ExtractedField = memo(function ExtractedField({ entry, highlights, 
     </div>
     <div className="min-w-0">{multilineKinds.has(kind) ? <Textarea {...inputProps} rows={1} /> : <Input {...inputProps} type={type} />}</div>
     {status ? <p id={`status-${id}`} className={`mt-1 text-sm ${warning ? 'text-amber-800' : 'text-muted-foreground'}`}>{status}{warning && field.note ? `: ${field.note}` : ''}</p> : null}
-    {changed || (selected && highlights.length > 0) ? <details className="mt-1 text-sm text-muted-foreground"><summary className="w-fit cursor-pointer py-1">{changed ? t('review.originalAndSources') : t('review.sources', { count: highlights.length })}</summary>
+    {changed || highlights.length > 0 ? <details className="mt-1 text-sm text-muted-foreground"><summary className="w-fit cursor-pointer py-1">{changed ? t('review.originalAndSources') : t('review.sources', { count: highlights.length })}</summary>
       {changed ? <div className="flex flex-wrap items-center gap-2 py-2"><span>{t('review.original', { value: field.value || t('common.notSpecified') })}</span><Button variant="ghost" size="sm" onClick={onReset}><RotateCcw aria-hidden="true" />{t('review.reset')}</Button></div> : null}
       {highlights.length === 0 ? <p className="py-2">{t('review.noSource')}</p> : highlights.map((highlight) => <button key={highlight.id} type="button" onClick={() => onSelect(highlight)} aria-pressed={active?.id === highlight.id} className="my-2 block w-full rounded-md border bg-background p-2 text-left hover:bg-muted"><span className="font-medium">{highlight.source.page ? t('review.sourcePage', { filename: highlight.source.filename, page: highlight.source.page }) : t('review.sourceEmail', { filename: highlight.source.filename })}</span><q className="mt-1 block whitespace-pre-wrap break-words">{highlight.source.quote}</q></button>)}
     </details> : null}

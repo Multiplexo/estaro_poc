@@ -1,0 +1,493 @@
+{
+  "dataset": "angebotserstellung_2026_11_03",
+  "rules": [
+    {
+      "key": "R01",
+      "title": "R01 Zusammengehörige Anfrageseiten zuordnen",
+      "instruction": "Eine Anfrage über alle zugehörigen Seiten erfassen. Fortsetzungsseiten anhand von Anfragenummer und Seitenfolge zuordnen, nicht als neue Anfrage behandeln.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf S. 2–3 und 11–12.",
+      "category": "extraction",
+      "section": "inquiry_data",
+      "is_active": false
+    },
+    {
+      "key": "R02",
+      "title": "R02 Kopfdaten und technische Positionsangaben erfassen",
+      "instruction": "Kunde, Standort, Ansprechpartner, Anfragenummer und Datum sowie je Warenposition Artikelart, Herstellungsart, Abmessungen, Werkstoff, Menge, Einheit und Längenvorgaben erfassen. Vorhandene Normen, Zeugnisse und Sonderanforderungen ergänzen.\n\nStatus: Abgeleitet. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 1; Anfragen.pdf.",
+      "category": "extraction",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "R03",
+      "title": "R03 Kundenstamm anhand von Name und Standort abgleichen",
+      "instruction": "Kunden über Name und Standort im Kundenstamm suchen und die Stammdaten mit der Anfrage abgleichen.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 2–3.",
+      "category": "matching",
+      "section": "kundeninformationen",
+      "is_active": false
+    },
+    {
+      "key": "R04",
+      "title": "R04 Aktivstatus und Kundensperre prüfen",
+      "instruction": "Prüfen, ob der zugeordnete Kunde aktiv oder gesperrt ist. Die konkrete Folge einer Sperre ist in den Unterlagen nicht festgelegt.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Kundenstamm.",
+      "category": "matching",
+      "section": "kundeninformationen",
+      "is_active": true
+    },
+    {
+      "key": "R05",
+      "title": "R05 Unklare Kundenzuordnung und Sperren vorlegen",
+      "instruction": "Bei gesperrtem Kunden oder nicht eindeutiger Zuordnung die weitere Bearbeitung zur manuellen Klärung vorlegen.\n\nStatus: Abgeleitet. Quelle: R03–R04.",
+      "category": "matching",
+      "section": "kundeninformationen",
+      "is_active": false
+    },
+    {
+      "key": "R06",
+      "title": "R06 Kunden- und Lieferantennummern unterscheiden",
+      "instruction": "Kunden- und Lieferantennummern entsprechend ihrer Rolle erfassen. Nummern aus einem Kundendokument nicht ungeprüft als Estaro-Stammdatenschlüssel verwenden.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf S. 1–7.",
+      "category": "extraction",
+      "section": "customer_contact",
+      "is_active": false
+    },
+    {
+      "key": "R07",
+      "title": "R07 Diverskonto für Neukunden bestätigen",
+      "instruction": "Für Neukunden nennt die alte VA das Diverskonto D30269 und die manuelle Erfassung der Kundendaten. Dieses Konto erst nach Bestätigung seiner aktuellen Verwendung als Standard hinterlegen.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 2–3.",
+      "category": "matching",
+      "section": "kundeninformationen",
+      "is_active": false
+    },
+    {
+      "key": "R08",
+      "title": "R08 Vorkasse bei Neukunden bestätigen",
+      "instruction": "Bei Neukunden die Textposition „Vorkasse“ einfügen; aktuelle Gültigkeit und Umgang mit abweichenden Kundenwünschen bestätigen.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 5.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R09",
+      "title": "R09 Adressen und Angebotskontakt getrennt erfassen",
+      "instruction": "Lieferadresse, Rechnungsadresse und Angebotsadresse getrennt erfassen. Abweichende Abladestellen und ausdrücklich vorgegebene E-Mail-Empfänger erhalten.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf S. 4–5, 10 und 14.",
+      "category": "extraction",
+      "section": "customer_contact",
+      "is_active": false
+    },
+    {
+      "key": "R10",
+      "title": "R10 Inaktive Artikel ausschließen",
+      "instruction": "Nur Artikel mit `Aktiv = -1` verwenden. Artikel mit `Aktiv = 0` sind inaktiv und dürfen nicht verwendet werden. Andere oder fehlende Werte zur Klärung vorlegen.\n\nStatus: Belegt für -1 und 0; sonst abgeleitet. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R11",
+      "title": "R11 Matchcode für die Artikelsuche verwenden",
+      "instruction": "Für die Artikelsuche den Matchcode verwenden. Präfix, Abmessungen und Werkstoff gemeinsam berücksichtigen.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R12",
+      "title": "R12 Matchcodepräfixe den Artikelarten zuordnen",
+      "instruction": "`nr` = nahtloses Rohr; `gr` = geschweißtes Rohr; `rd` = Rundstahl/Vollmaterial/Stabstahl; `nb` = nahtloser Bogen; `gb` = geschweißter Bogen.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R13",
+      "title": "R13 Matchcode aus Maßen und Werkstoff bilden",
+      "instruction": "Beispiel für die Suchbildung: nahtloses Rohr, Außendurchmesser 8 mm, Wandstärke 1 mm, Werkstoff 1.4841 → `nr 8x1 4841`.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R14",
+      "title": "R14 Bleche über Dicke und Format suchen",
+      "instruction": "Bei Blechen nennt die alte VA die Suche über Dicke, Formatkürzel und Werkstoff; `k` = Kleinformat, `m` = Mittelformat, `g` = Großformat.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 5.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R15",
+      "title": "R15 Suchtreffer auf technische Eignung prüfen",
+      "instruction": "Einen Suchtreffer erst nach Abgleich von Herstellungsart, Abmessungen, Werkstoff und zusätzlichen technischen Anforderungen als passend übernehmen. Werkstoffbezeichnungen und Normen aus der Anfrage erhalten.\n\nStatus: Abgeleitet. Quelle: Erläuterung .docx; Anfragen.pdf.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R16",
+      "title": "R16 Maße normalisieren und Originalangaben erhalten",
+      "instruction": "Dezimalzeichen und Einheiten für die Suche vereinheitlichen, Originalangaben jedoch erhalten. Keine automatische technische Gleichsetzung ähnlicher Maße, etwa 48,26 mm und 48,3 mm.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf S. 1 und 6.",
+      "category": "extraction",
+      "section": "articles",
+      "is_active": false
+    },
+    {
+      "key": "R17",
+      "title": "R17 Technische Alternativen und Mengenvarianten trennen",
+      "instruction": "Alternativen getrennt von der Hauptanforderung erfassen. Beispielsweise „geschweißt alternativ nahtlos“ als zulässige Herstellungsalternativen und „6 m alternativ 12 m“ als Mengenvarianten behandeln. Alternativmengen nicht addieren.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf S. 13–14.",
+      "category": "extraction",
+      "section": "articles",
+      "is_active": false
+    },
+    {
+      "key": "R18",
+      "title": "R18 Menge, Einheit, Stückzahl und Einzellänge erfassen",
+      "instruction": "Angefragte Gesamtmenge, Mengeneinheit, Stückzahl und Einzellänge getrennt erfassen, soweit angegeben. Ihre rechnerische Konsistenz prüfen.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf S. 1–7.",
+      "category": "extraction",
+      "section": "articles",
+      "is_active": false
+    },
+    {
+      "key": "R19",
+      "title": "R19 Handelslängen nicht pauschal mit sechs Metern gleichsetzen",
+      "instruction": "Eine Handels- oder Herstelllänge nicht pauschal mit 6 m gleichsetzen. Die VA nennt 6 m in ihrem Beispiel; Anfragen enthalten auch 5–7 m oder 5.500–ca. 6.200 mm.\n\nStatus: Abgeleitet. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 6; Anfragen.pdf S. 6 und 13.",
+      "category": "extraction",
+      "section": "articles",
+      "is_active": false
+    },
+    {
+      "key": "R20",
+      "title": "R20 Gesamtmenge aus Stückzahl und Länge prüfen",
+      "instruction": "Wenn Stückzahl und Länge eindeutig sind, die Gesamtmenge daraus prüfen: etwa 10 × 6 m = 60 m, 2 × 6 m = 12 m oder 22 × 6 m = 132 m. Eine zusätzlich angegebene kg-Menge separat erhalten.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf S. 4–5 und 7.",
+      "category": "extraction",
+      "section": "articles",
+      "is_active": false
+    },
+    {
+      "key": "R21",
+      "title": "R21 Fixzuschnitt mit Artikel 99001070 berechnen",
+      "instruction": "Bei Fixzuschnitten Artikel **99001070** einfügen. Die Menge dieser Zuschlagsposition beträgt laut Erläuterung immer **1 Stück**. Der Einzelpreis beträgt **25 % des Gesamtpreises der zugehörigen Warenposition**.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R22",
+      "title": "R22 Preisgrundlage und Zuordnung des Fixzuschlags klären",
+      "instruction": "Den Fixzuschlag einer konkreten Warenposition zuordnen. Die Behandlung mehrerer Zuschnittpositionen und die genaue Preisbasis einschließlich möglicher Zuschläge sind vor einer automatischen Berechnung zu bestätigen.\n\nStatus: Abgeleitet. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R23",
+      "title": "R23 Textbaustein Stempelung fix bestätigen",
+      "instruction": "Bei Fixlängen nennt die alte VA zusätzlich die Textzeile „Stempelung fix“.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 6.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R24",
+      "title": "R24 Zubehöraktualisierung nach Längenart bestätigen",
+      "instruction": "Bei der ERP-Abfrage „Zubehör aktualisieren“ nach Preisänderung nennt die alte VA: normale Längen → „Ja“; Fixstücke → „Nein“.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 8.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R25",
+      "title": "R25 Werksabnahmezeugnis mit Artikel 9001004 zuordnen",
+      "instruction": "Wenn ein Werksabnahmezeugnis angefragt wird, Artikel **9001004** verwenden. E nennt als alternative Bezeichnungen APZ, WAZ, 3.1 und Abnahmeprüfzeugnis. Die genaue geforderte Zeugnisart und Norm zusätzlich erhalten.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R26",
+      "title": "R26 Ursprungszeugnis mit Artikel 9001017 zuordnen",
+      "instruction": "Wenn ein Ursprungszeugnis angefragt wird, Artikel **9001017** verwenden.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R27",
+      "title": "R27 Umstempelbescheinigung mit Artikel 9001011 zuordnen",
+      "instruction": "Wenn eine Umstempelbescheinigung gewünscht ist, kann zusätzlich Artikel **9001011** eingefügt werden. Daraus folgt keine pauschale Pflicht bei jedem Zuschnitt.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R28",
+      "title": "R28 Lieferantenerklärung vom Ursprungszeugnis unterscheiden",
+      "instruction": "Eine Lieferantenerklärung für Waren mit Präferenzursprungseigenschaft getrennt vom Ursprungszeugnis behandeln. Für sie ist in den Unterlagen keine Artikelnummer festgelegt.\n\nStatus: Abgeleitet. Quelle: Erläuterung .docx; Anfragen.pdf S. 11.",
+      "category": "extraction",
+      "section": "articles",
+      "is_active": false
+    },
+    {
+      "key": "R29",
+      "title": "R29 Fracht und Verpackung als Zuschläge im Belegfuß führen",
+      "instruction": "Fracht und Verpackung als feste Zuschläge im **Belegfuß** führen. Die ältere VA beschreibt noch separate Artikelpositionen; diese Vorgehensweise wird im Entwurf durch E ersetzt. Die Zuschlagshöhen sind nicht angegeben.\n\nStatus: Belegt. Quelle: Erläuterung .docx; abweichend Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 6.",
+      "category": "matching",
+      "section": "preisUndSteuerbasis",
+      "is_active": true
+    },
+    {
+      "key": "R30",
+      "title": "R30 Doppelte Verpackungskosten vermeiden",
+      "instruction": "Bereits als Kundenposition angefragte Verpackung und interne Verpackungszuschläge auf Überschneidung prüfen, damit Kosten nicht doppelt angesetzt werden.\n\nStatus: Abgeleitet. Quelle: Erläuterung .docx; Anfragen.pdf S. 6.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R31",
+      "title": "R31 Automatischen Legierungszuschlag bestätigen",
+      "instruction": "Der Legierungszuschlag wird laut alter VA nach Mengeneingabe automatisch ergänzt. Aktuelles ERP-Verhalten und Berechnungsbasis bestätigen; keine doppelte manuelle Ergänzung vorsehen.\n\nStatus: Vorläufig; Doppelungsprüfung abgeleitet. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 6.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R32",
+      "title": "R32 Zeugnisumfang und Kosten gesondert prüfen",
+      "instruction": "Zeugnisse nicht allein aufgrund des alten VA-Standards pauschal als kostenpflichtig ansetzen. Angefragte Zeugnisse, erforderliche Nachweise und eine etwaige Forderung nach Kostenfreiheit getrennt prüfen.\n\nStatus: Abgeleitet. Quelle: Erläuterung .docx; Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 6; Anfragen.pdf S. 4.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R33",
+      "title": "R33 Lager, Streckengeschäft und Sonderanfertigung unterscheiden",
+      "instruction": "Beschaffungsweg unterscheiden: eigenes Lager, Partner/Lieferant im Streckengeschäft oder Sonderanfertigung. Im Streckengeschäft erfolgt der Versand direkt vom Lieferanten zum Kunden.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R34",
+      "title": "R34 Partnerlisten für Preise und Bestände heranziehen",
+      "instruction": "Vorhandene Preis- und Bestandslisten der Partner als PDF/Excel heranziehen. Fehlende Informationen müssen gegebenenfalls per E-Mail beim Lieferanten angefragt werden.\n\nStatus: Belegt. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": true
+    },
+    {
+      "key": "R35",
+      "title": "R35 Sondermaße auf Herstellbarkeit prüfen",
+      "instruction": "Bei Sondermaßen die Möglichkeit einer Rohranfertigung prüfen. Daraus keine bereits bestätigte Herstellbarkeit, Lieferzeit oder Preiszusage ableiten.\n\nStatus: Belegt für Möglichkeit; Prüfung abgeleitet. Quelle: Erläuterung .docx, Artikelstamm.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R36",
+      "title": "R36 Lagerbestand und Dispobestand unterscheiden",
+      "instruction": "Lagerbestand und Dispobestand getrennt prüfen: Lagerbestand zeigt den derzeitigen Bestand; Dispobestand die zukünftigen Ein- und Abgänge.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 9.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R37",
+      "title": "R37 Textbaustein Werksneueingang bestätigen",
+      "instruction": "Wird aus einem Neueingang angeboten, nennt die alte VA die Textposition „Werksneueingang“.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 9.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R38",
+      "title": "R38 Mertl-Lieferzeit und Langtext bestätigen",
+      "instruction": "Für eine kundenspezifische Bestellung bei Mertl nennt die alte VA den Langtext „aus Werksvorrat Lt ca 7-10 Werktage“. Diese Zeitangabe erst nach aktueller Bestätigung verwenden.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 9.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R39",
+      "title": "R39 Wunschtermin vom angebotenen Liefertermin unterscheiden",
+      "instruction": "Kundenwunschtermin und angebotenen Liefertermin getrennt führen. Den angebotenen Termin nach Bestands- und Beschaffungsprüfung erneut prüfen.\n\nStatus: Vorläufig für erneute Prüfung; Trennung abgeleitet. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 4; Anfragen.pdf.",
+      "category": "matching",
+      "section": "angebotsdetails",
+      "is_active": false
+    },
+    {
+      "key": "R40",
+      "title": "R40 Belegart und Referenzfelder befüllen",
+      "instruction": "Für ein Angebot die Belegart „Angebot“ wählen. „Ihr Zeichen“ mit dem Ansprechpartner und „Ihre Belegnummer“ mit der Anfragenummer befüllen; ersatzweise nennt die alte VA „E-Mail“ oder „tel.“.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 2–3.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "R41",
+      "title": "R41 Angebotsgültigkeit von einem Tag bestätigen",
+      "instruction": "Die alte VA nennt eine Angebotsgültigkeit von einem Tag. Diese Angabe ist kein bestätigter aktueller Standard.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 3.",
+      "category": "matching",
+      "section": "angebotsdetails",
+      "is_active": false
+    },
+    {
+      "key": "R42",
+      "title": "R42 Preislisten, Verkaufshistorie und Kalkulation verwenden",
+      "instruction": "Preise anhand der Preisliste ermitteln; Verkaufshistorie oder Preiskalkulation können ergänzend herangezogen werden. Die alte VA erlaubt Auf- oder Abrunden, nennt aber keine Rundungsregel.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 7.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R43",
+      "title": "R43 Preisgruppe anhand von Vertreter und Ländergruppe bestimmen",
+      "instruction": "Preisgruppe DACH, wenn Vertreter = `V0460` und Gruppe ∈ {DE, AT, CH}; Endkunde, wenn Vertreter ≠ `V0460` und Gruppe ∈ {DE, AT, CH}; Standard, wenn Gruppe ∉ {DE, AT, CH}. Fehlende Werte nicht stillschweigend einer Gruppe zuordnen.\n\nStatus: Vorläufig; Umgang mit fehlenden Werten abgeleitet. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 7.",
+      "category": "matching",
+      "section": "preisUndSteuerbasis",
+      "is_active": false
+    },
+    {
+      "key": "R44",
+      "title": "R44 Roherlösgrenzen und Berechnung bestätigen",
+      "instruction": "Die alte VA nennt für Lagerartikel einen durchschnittlichen Roherlös von 50–60 %, mindestens 30 % der Gesamtsumme, und für Zukaufartikel mindestens 10 % der Gesamtsumme. Aktuelle Gültigkeit und Berechnung vor Verwendung bestätigen. Keine automatische Umdeutung in einen Aufschlag auf den Einkaufspreis.\n\nStatus: Vorläufig. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 10.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "R45",
+      "title": "R45 Beispielpreise und Platzhalter nicht übernehmen",
+      "instruction": "Preise aus Beispiel-Screenshots sowie 0,00-EUR-Platzhalter und Gewichtsplatzhalter in Kundenanfragen nicht als gültige Verkaufs- oder Stammdaten übernehmen.\n\nStatus: Abgeleitet. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 8 und 11–13; Anfragen.pdf S. 3 und 7.",
+      "category": "matching",
+      "section": "positionen",
+      "is_active": false
+    },
+    {
+      "key": "R46",
+      "title": "R46 Kundenbedingungen erfassen und Konflikte klären",
+      "instruction": "Gewünschte Liefer-, Zahlungs- und Verpackungsbedingungen ausdrücklich erfassen. Bei Konflikten mit Estaro-Vorgaben eine Entscheidung einholen; Kundenbedingungen nicht allein durch ihre Erwähnung als akzeptiert behandeln.\n\nStatus: Abgeleitet. Quelle: Anfragen.pdf; Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 5.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "R47",
+      "title": "R47 Angebot vor Abschluss vollständig prüfen",
+      "instruction": "Vor Abschluss Kundenzuordnung, Positionen, technische Anforderungen, Mengen, Preise, Zuschläge, Zeugnisse, Liefertermin und Roherlös prüfen. Die Vorschau für eine abschließende Kontrolle verwenden.\n\nStatus: Vorläufig; Prüfumfang zusammengeführt. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 9–11; Erläuterung .docx; Anfragen.pdf.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "R48",
+      "title": "R48 Richtigen Angebotsempfänger wählen",
+      "instruction": "Den richtigen Ansprechpartner beziehungsweise die ausdrücklich genannte Angebotsadresse auswählen. Die alte VA beschreibt anschließend den Versand über die E-Mail-Funktion und Outlook.\n\nStatus: Vorläufig; ausdrückliche Adresse anfragebezogen. Quelle: Verfahrensdokumentation Angeboterstellen.pdf (Version 4.0 vom 27.07.2023, teilweise veraltet) S. 11–12; Anfragen.pdf S. 14.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "R49",
+      "title": "R49 Fehlende oder widersprüchliche Angaben zur Klärung vorlegen",
+      "instruction": "Bei fehlenden technischen Kerndaten, ungeklärtem Preis oder Bestand, widersprüchlichen Anforderungen oder unbestätigtem Liefertermin den Entwurf zur Klärung vorlegen und keine Angaben erfinden.\n\nStatus: Abgeleitet. Quelle: Zusammenführung der Prüfanforderungen.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K01",
+      "title": "K01 Historische Anfrage Richard Weber, 14097",
+      "instruction": "Historisches Beispiel: Richard Weber, 14097. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\n90 m geschweißtes Rohr 48,3 × 2,5 mm, 1.4828; Lieferlänge 6 m; KO ungeglüht; Toleranzen DIN EN 1127 D3 T3; EN 10296-2 und angegebene Zeugnisanforderungen erhalten. Wunschtermin 08.05.2026. Gewünscht: frei Werk einschließlich Verpackung, 30 Tage netto. Warenannahme Mo–Do 07–15 Uhr, Fr 07–13 Uhr.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 1.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K02",
+      "title": "K02 Historische Anfrage Linster, 930905",
+      "instruction": "Historisches Beispiel: Linster, 930905. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtloses Rohr 168,3 × 4,5 mm, 1.4828; 1 Stück mit 1.000 mm Fixlänge = 1 m; Fixzuschlag berücksichtigen. Gewünscht: CPT gemäß Incoterms 2020, 30 Tage netto. Anfragenummer im Schriftwechsel angeben.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 2–3.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K03",
+      "title": "K03 Historische Anfrage Krönlein, AZ 12 70139267",
+      "instruction": "Historisches Beispiel: Krönlein, AZ 12 70139267. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nGeschweißtes Rohr 33,7 × 2,6 mm, 1.4828; 22 Stäbe à 6 m; angegebene Gesamtmenge 267 kg erhalten. Anfrage-Nr. und Datum auf Unterlagen angeben; Lieferadresse Madridstraße 8 beachten. Mindestens einen Tag vorher avisieren; Annahme Mo–Do 07–14 Uhr, Fr 07–12 Uhr. Kostenfreies APZ 3.1 mit gefordertem CE-Zeichen spätestens am Liefertag nur für mit * gekennzeichnete Positionen verlangt; Anwendbarkeit auf die Position prüfen. Geforderte Ursprungs-/Vormaterialnachweise und Sanktionsbestätigungen als Prüfanforderungen erfassen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 4.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K04",
+      "title": "K04 Historische Anfrage Eisen-Fischer, 6000704790",
+      "instruction": "Historisches Beispiel: Eisen-Fischer, 6000704790. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\n60 m Rohr 33,7 × 3 mm, 1.4828, als 10 × 6 m, mit WAZ. Getrennte Liefer- und Rechnungsadresse erhalten. Kürzeste verlässliche Lieferzeit und gewünschtes Datum 14.04.2026 nicht ungeprüft zusagen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 5.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K05",
+      "title": "K05 Historische Anfrage SchwarzwaldEisen/WesterwaldStahl, 268010682",
+      "instruction": "Historisches Beispiel: SchwarzwaldEisen/WesterwaldStahl, 268010682. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtloses Rohr 48,26 × 5,08 mm, 1.4845 / TP310S, EN 10297-2; 18 m, 3 Stäbe, Längenangaben 5–7 m und 3 × 6.000 mm gemeinsam prüfen. Separate angefragte Verpackungspauschale mit dem Zuschlag im Belegfuß abgleichen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 6.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K06",
+      "title": "K06 Historische Anfrage IBL, 35878",
+      "instruction": "Historisches Beispiel: IBL, 35878. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtloses Rohr 40 × 4 mm, 1.4301, CFA-Qualität; 2 × 6 m = 12 m. Gewünscht: frei Haus einschließlich Verpackung; 14 Tage 2 % Skonto, 30 Tage netto.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 7.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K07",
+      "title": "K07 Historische Anfrage HSM, T10304735",
+      "instruction": "Historisches Beispiel: HSM, T10304735. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtloses Rohr 40 × 3 mm, 1.4571 / 316Ti, 24 m. Herstellerzulassungen und Norm-/Prüfvorgaben gemäß Anfrage prüfen: DGRL 2014/68/EU, AD 2000-W0, EN 10216-5, AD 2000 W2/W10, NACE MR0175/ISO 15156, NACE MR0103, IK-Test ASTM A262-E/EN ISO 3651-2, TC2. Komplette Position aus einer Charge; Kennzeichnung durch Hartstempeln oder Prägen. Ursprung im Angebot nennen; Material aus Indien, Russland und China ist für diese Anfrage ausgeschlossen. Alle Nebenkosten mit Art und Preis nennen. Verpackung streng neutral oder mit HSM-Etiketten. Gewünscht: 14 Tage 3 % Skonto, 30 Tage 2 %, 60 Tage netto.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 8.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K08",
+      "title": "K08 Historische Anfrage Günther, 92600725",
+      "instruction": "Historisches Beispiel: Günther, 92600725. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtlos gezogenes, beidseitig offenes Rohr 21,3 × 2,6 mm, 1.4841; 252 m in Herstelllängen. Ein Abnahmezeugnis 3.1 als separate angefragte Position berücksichtigen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 9.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K09",
+      "title": "K09 Historische Anfrage rff, 040 /A78734418/97973549",
+      "instruction": "Historisches Beispiel: rff, 040 /A78734418/97973549. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtloses Rohr 60,30 × 3,60 mm, 1.4828; 12 m, HL 6 m; APZ DIN EN 10204/3.1. Versandadresse Stuhr beachten. Anfragenummer auf dem Angebot und Kundenpositionsnummer unter jeder Position ausgeben. Geforderte Zeugnisse sind laut Anfrage Bestandteil der Lieferung; rff knüpft das Rechnungsdatum an den Eingang des letzten Zeugnisses. Preis- und Mengeneinheiten ausdrücklich abgleichen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 10.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K10",
+      "title": "K10 Historische Anfrage Günther, 92600712",
+      "instruction": "Historisches Beispiel: Günther, 92600712. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtlos gezogenes, beidseitig offenes Rohr 10 × 1,5 mm, 1.4841; 600 m in Herstelllängen. Ein Zeugnis 3.1 sowie eine Lieferantenerklärung für Waren mit Präferenzursprungseigenschaft berücksichtigen. Letztere spätestens mit der Ware bereitstellen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 11–12.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K11",
+      "title": "K11 Historische Anfrage Emsdettener Eisenhandlung, 213552",
+      "instruction": "Historisches Beispiel: Emsdettener Eisenhandlung, 213552. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nRohr 60,3 × 8,74 mm, 1.4828, hitzebeständig; 18 m; geschweißt, alternativ nahtlos. Längen mindestens 5.500 bis ca. 6.200 mm. Geforderte Ursprungs-/Vormaterialnachweise und Sanktionsbestätigungen als Prüfanforderungen erfassen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 13.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    },
+    {
+      "key": "K12",
+      "title": "K12 Historische Anfrage Lämmermeier, 134063",
+      "instruction": "Historisches Beispiel: Lämmermeier, 134063. Diese Regel gilt ausschließlich für diese Beispielanfrage und ist keine dauerhafte Kundenregel. Auf einen aktuellen Vorgang nur anwenden, soweit dessen Quellen dieselben Anforderungen belegen. Historische Mengen, Termine und Adressen nicht ungeprüft übernehmen.\n\nNahtloses Rohr 22 × 2 mm, 1.4841; 6 m, alternativ 12 m, als getrennte Varianten behandeln. Lieferzeit und alle Kosten nennen. Angebot laut ausdrücklichem Hinweis an **info@glmetall.de**; der abweichende Footer **info@glmetal.de** ist nicht die ausdrücklich vorgegebene Versandadresse. Eventuell beigefügte Zeichnungen laut Anfrage weder kopieren noch Dritten zugänglich machen.\n\nStatus: Anfragebezogen. Quelle: Anfragen.pdf S. 14.",
+      "category": "matching",
+      "section": null,
+      "is_active": false
+    }
+  ]
+}

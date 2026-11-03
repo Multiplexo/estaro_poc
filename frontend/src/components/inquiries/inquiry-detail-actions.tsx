@@ -1,15 +1,43 @@
+import { useRef } from 'react'
+import { Menu } from '@base-ui/react/menu'
 import { useNavigate } from '@tanstack/react-router'
+import { EllipsisIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useDeleteInquiry } from '@/hooks/use-delete-inquiry'
+import { useReprocessInquiry } from '@/hooks/use-reprocess-inquiry'
 import type { Inquiry } from '@/lib/api'
 import { DeleteInquiryDialog } from './delete-inquiry-dialog'
-import { InquiryJobActions } from './inquiry-job-actions'
+import { InquiryErrorIndicator } from './inquiry-error-indicator'
 
 export function InquiryDetailActions({ inquiry }: { inquiry: Inquiry }) {
   const navigate = useNavigate()
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
   const deletion = useDeleteInquiry({ onDeleted: () => navigate({ to: '/' }) })
+  // The detail page already polls these shared queries through useInquiryAnalysis.
+  const reprocess = useReprocessInquiry(inquiry.id, { poll: false })
 
   return <>
-    <InquiryJobActions inquiry={inquiry} deletion={deletion} />
+    {reprocess.error ? <InquiryErrorIndicator message={reprocess.error} /> : null}
+    <Menu.Root>
+      <Menu.Trigger render={<Button ref={menuTriggerRef} variant="ghost" size="icon" className="size-11" aria-label="Aktionen für diese Anfrage" />}>
+        <EllipsisIcon aria-hidden="true" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner align="end" sideOffset={4} className="isolate z-50">
+          <Menu.Popup finalFocus={deletion.inquiry ? false : undefined} className="w-80 max-w-[calc(100vw-2rem)] rounded-lg bg-popover p-1 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden">
+            <Menu.Item disabled={reprocess.disabled || deletion.isPending} onClick={reprocess.start} className="flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 py-2 outline-none data-highlighted:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50">
+              <RefreshCwIcon aria-hidden="true" className={`size-4 shrink-0 ${reprocess.busy ? 'motion-safe:animate-spin' : ''}`} />
+              <span>{reprocess.label}</span>
+            </Menu.Item>
+            <Menu.Separator className="my-1 h-px bg-border" />
+            <Menu.Item disabled={deletion.isPending} onClick={() => deletion.selectInquiry(inquiry, menuTriggerRef.current ?? undefined)} className="flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 py-2 text-destructive outline-none data-highlighted:bg-destructive/10 data-disabled:pointer-events-none data-disabled:opacity-50">
+              <Trash2Icon aria-hidden="true" className="size-4 shrink-0" />
+              Löschen
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
     <DeleteInquiryDialog deletion={deletion} />
   </>
 }

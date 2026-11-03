@@ -1,10 +1,13 @@
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useApi } from './use-api'
+import { useInquiryProcessing } from './use-inquiry-processing'
 import { inquiryResponse, jobSummary, loadAnalysis } from '@/lib/inquiry-api'
 
 export function useInquiryAnalysis(inquiryId: string) {
   const api = useApi()
+  const client = useQueryClient()
+  const { job, matching } = useInquiryProcessing(inquiryId)
   const inquiry = useQuery({
     queryKey: ['inquiry', inquiryId],
     queryFn: async ({ signal }) => inquiryResponse((await api.inquiries.getInquiryById(inquiryId, { signal })).data),
@@ -16,13 +19,15 @@ export function useInquiryAnalysis(inquiryId: string) {
     enabled: !!inquiry.data,
     refetchInterval: 10000,
   })
-  const jobId = analysis.data?.job_id
-  const job = useQuery({
-    queryKey: ['inquiry-job', inquiryId, jobId],
-    queryFn: async ({ signal }) => (await api.extractions.getExtractionStatus(jobId!, { signal })).data,
-    enabled: !!jobId,
-    refetchInterval: (query) => query.state.data?.status === 'queued' || query.state.data?.status === 'running' ? 2000 : false,
-  })
+  const jobId = job.data?.id
+  const jobStatus = job.data?.status
+  const matchingStatus = matching.data?.status
+  useEffect(() => {
+    if (jobStatus !== 'succeeded' && jobStatus !== 'failed') return
+    void client.invalidateQueries({ queryKey: ['inquiry', inquiryId] })
+    void client.invalidateQueries({ queryKey: ['inquiry-analysis', inquiryId] })
+    void client.invalidateQueries({ queryKey: ['inquiries'] })
+  }, [client, inquiryId, jobId, jobStatus, matchingStatus])
   const inquiryData = useMemo(() => inquiry.data ? {
     ...inquiry.data, processing_job: job.data ? jobSummary(job.data) : null,
   } : undefined, [inquiry.data, job.data])

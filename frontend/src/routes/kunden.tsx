@@ -13,7 +13,7 @@ function CustomersPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Kunden</h1>
         <p className="text-sm text-muted-foreground">Kundenstamm mit Kontaktdaten, Status und Liefersperren.</p>
       </div></header>
-      <DataTable resource={customersResource} columns={customerColumns} caption="Kundenstamm" emptyMessage="Keine Kunden vorhanden." />
+      <DataTable resource={customersResource} columns={customerColumns} caption="Kundenstamm" emptyMessage="Keine Kunden vorhanden." searchLabel="Kunden durchsuchen" searchPlaceholder="Kundennummer, Name, Ort oder Matchcode …" />
     </section>
   )
 }

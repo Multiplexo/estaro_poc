@@ -13,7 +13,7 @@ function ArticlesPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Artikel</h1>
         <p className="text-sm text-muted-foreground">Artikelstamm mit Varianten, Lagerbestand und Status.</p>
       </div></header>
-      <DataTable resource={articlesResource} columns={articleColumns} caption="Artikelstamm" emptyMessage="Keine Artikel vorhanden." />
+      <DataTable resource={articlesResource} columns={articleColumns} caption="Artikelstamm" emptyMessage="Keine Artikel vorhanden." searchLabel="Artikel durchsuchen" searchPlaceholder="Artikelnummer, Bezeichnung oder Matchcode …" />
     </section>
   )
 }

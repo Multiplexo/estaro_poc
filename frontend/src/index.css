@@ -153,6 +153,9 @@
     @apply overflow-hidden rounded-xl border bg-card;
   }
   [data-slot="table"] { font-variant-numeric: tabular-nums; }
+  [data-slot="table-row"][data-automatic-source] > :first-child {
+    box-shadow: inset 3px 0 0 var(--sidebar);
+  }
   [data-slot="sidebar-inner"] [data-slot="skeleton"] { background-color: var(--sidebar-accent); }
   [data-slot="sidebar-content"] .text-muted-foreground { color: var(--sidebar-foreground); }
   [data-slot="sidebar-content"] [data-slot="button"] { border-color: var(--sidebar-border); background: var(--sidebar-accent); color: white; }

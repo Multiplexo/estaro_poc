@@ -4,6 +4,22 @@ import type { Article as ArticleResponse, Customer as CustomerResponse, RequestP
 export type Article = ArticleResponse
 export type Customer = CustomerResponse
 
+const searchIndexes = new WeakMap<object[], string[][]>()
+
+export function filterMasterData<T extends object>(items: T[], search: string): T[] {
+  const term = search.trim().toLocaleLowerCase('de-DE')
+  if (!term) return items
+
+  let index = searchIndexes.get(items)
+  if (!index) {
+    index = items.map((item) => Object.values(item)
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.toLocaleLowerCase('de-DE')))
+    searchIndexes.set(items, index)
+  }
+  return items.filter((_, row) => index[row].some((value) => value.includes(term)))
+}
+
 export type PaginatedResource<T> = {
   queryKey: string
   load: (

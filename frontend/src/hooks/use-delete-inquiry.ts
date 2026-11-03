@@ -21,7 +21,7 @@ export function useDeleteInquiry({ onDeleted }: { onDeleted?: () => void | Promi
     onSuccess: async (_, id) => {
       await removeInquiryExtractions(client, id)
       await onDeleted?.()
-      const keys = [['inquiry', id], ['inquiry-analysis', id], ['inquiry-job', id]]
+      const keys = [['inquiry', id], ['inquiry-analysis', id], ['inquiry-job', id], ['inquiry-matching', id]]
       await Promise.all(keys.map((queryKey) => client.cancelQueries({ queryKey })))
       keys.forEach((queryKey) => client.removeQueries({ queryKey }))
       setInquiry(null)

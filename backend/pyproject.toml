@@ -18,9 +18,11 @@ dependencies = [
     "langchain>=1.4.7",
     "langchain-core>=1.7.3",
     "langchain-openai>=1.7.3",
+    "langgraph>=1,<2",
+    "langgraph-checkpoint-postgres>=3,<4",
     "minio>=7.2.20",
     "openai>=3.41.0",
-    "psycopg[binary]>=3.3.6",
+    "psycopg[binary,pool]>=3.3.6",
     "pydantic>=2.14.2",
     "pydantic-settings>=2.16.2",
     "rich>=15.0.0",
@@ -36,6 +38,7 @@ package = false
 
 [tool.pyright]
 include = ["app"]
+pythonVersion = "3.13"
 typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"

@@ -7,7 +7,6 @@ import sys
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import TypeVar
 
 import structlog
 from pydantic import BaseModel
@@ -30,7 +29,6 @@ logger = structlog.get_logger(__name__)
 console = Console()
 DEFAULT_RESOURCES = Path(__file__).resolve().parents[2] / "resources"
 BATCH_SIZE = 500
-Record = TypeVar("Record", bound=SQLModel)
 
 ARTICLE_COLUMNS = {
     "Artikelnummer": "article_number",
@@ -128,7 +126,7 @@ def parse_boolean(value: str) -> bool:
     raise ValueError(f"Invalid boolean: {value!r}")
 
 
-def read_records(
+def read_records[Record: SQLModel](
     path: Path, columns: dict[str, str], model: type[Record]
 ) -> list[Record]:
     """Validate every source row before opening a database transaction."""
@@ -186,7 +184,7 @@ def record_key(record: SQLModel) -> tuple[str, ...]:
     raise TypeError(f"Unsupported record type: {type(record).__name__}")
 
 
-async def import_records(
+async def import_records[Record: SQLModel](
     session: AsyncSession, model: type[Record], records: list[Record]
 ) -> ImportSummary:
     """Insert or update records directly, preserving existing primary keys."""

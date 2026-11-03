@@ -1,7 +1,9 @@
 import type { RowData } from '@tanstack/react-table'
+import { Search } from 'lucide-react'
 import { DataTablePagination } from '@/components/data-table-pagination'
 import { TablePageSpacer } from '@/components/table-page-spacer'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { usePaginatedTable } from '@/hooks/use-paginated-table'
 import type { DataTableColumns } from '@/lib/data-table'
@@ -12,13 +14,30 @@ type DataTableProps<T extends RowData> = {
   columns: DataTableColumns<T>
   caption: string
   emptyMessage: string
+  searchLabel: string
+  searchPlaceholder: string
 }
 
-export function DataTable<T extends { id?: string | number | null }>({ resource, columns, caption, emptyMessage }: DataTableProps<T>) {
-  const { table, query, rows, columnWidths, tableWidth } = usePaginatedTable(resource, columns)
+export function DataTable<T extends { id?: string | number | null }>({ resource, columns, caption, emptyMessage, searchLabel, searchPlaceholder }: DataTableProps<T>) {
+  const { search, setSearch, table, query, rows, columnWidths, tableWidth } = usePaginatedTable(resource, columns)
 
   return (
     <div className="space-y-3">
+      <div className="relative w-full sm:max-w-md">
+        <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          name={`${resource.queryKey}-search`}
+          autoComplete="off"
+          spellCheck={false}
+          aria-label={searchLabel}
+          placeholder={searchPlaceholder}
+          maxLength={200}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="h-10 bg-card pl-9"
+        />
+      </div>
       {query.isError ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
           <p>{query.error.message}</p>
@@ -57,7 +76,7 @@ export function DataTable<T extends { id?: string | number | null }>({ resource,
             )) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-center text-muted-foreground" style={{ height: Math.max(96, Math.min(table.state.pagination.pageSize, query.data?.total ?? table.state.pagination.pageSize) * 72) }}>
-                  {query.isPending ? 'Daten werden geladen …' : query.isError ? 'Daten konnten nicht geladen werden.' : emptyMessage}
+                  {query.isPending ? 'Daten werden geladen …' : query.isError ? 'Daten konnten nicht geladen werden.' : search.trim() ? 'Keine passenden Einträge gefunden.' : emptyMessage}
                 </TableCell>
               </TableRow>
             )}

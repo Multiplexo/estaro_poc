@@ -37,6 +37,8 @@ export function extractionStepLabel(step: string): string {
   const labels: Record<string, string> = {
     load: 'PDF laden', document_classification: 'Dokument aufbereiten',
     extract: 'Extraktion', validate: 'Validierung',
+    recheck_missing_fields: 'Fehlende Angaben prüfen',
+    recheck_fields: 'Fehlende und unsichere Angaben prüfen',
   }
   return labels[step] ?? step
 }
