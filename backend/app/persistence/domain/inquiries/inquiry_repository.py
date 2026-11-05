@@ -5,7 +5,8 @@ from typing import cast
 from uuid import UUID
 
 import structlog
-from sqlalchemy import and_, case, delete, func, or_
+from sqlalchemy import and_, case, delete, func, or_, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import InstrumentedAttribute, selectinload
 from sqlalchemy.sql.elements import ColumnElement
@@ -34,6 +35,7 @@ from app.persistence.domain.inquiries.schema.inquiry import (
 from app.persistence.domain.inquiries.schema.inquiry_extraction import (
     InquiryExtraction as ExtractionSchema,
 )
+from app.persistence.domain.inquiries.schema.inquiry_import import InquiryImport
 from app.persistence.jobs.extractions.schema.extraction_job import ExtractionJob
 
 logger = structlog.get_logger(__name__)
@@ -265,6 +267,21 @@ class InquiryRepository:
             )
             raise
 
+    async def list_documents(self, inquiry_id: UUID) -> list[InquiryDocument]:
+        try:
+            statement = (
+                select(DocumentSchema)
+                .where(DocumentSchema.inquiry_id == inquiry_id)
+                .order_by(col(DocumentSchema.filename), col(DocumentSchema.id))
+            )
+            return [
+                document.to_model()
+                for document in (await self.session.exec(statement)).all()
+            ]
+        except SQLAlchemyError:
+            logger.exception("inquiry_document_list_failed", inquiry_id=str(inquiry_id))
+            raise
+
     async def list_extractions(
         self, inquiry_id: UUID, offset: int = 0, limit: int = 100
     ) -> list[InquiryExtractionSnapshot]:
@@ -309,6 +326,49 @@ class InquiryRepository:
     async def save_document(self, document: DocumentSchema) -> None:
         self.session.add(document)
         await self.session.flush()
+
+    async def get_import(self, import_key: str) -> InquiryImport | None:
+        try:
+            return await self.session.get(
+                InquiryImport, import_key, populate_existing=True
+            )
+        except SQLAlchemyError:
+            logger.exception("inquiry_import_get_failed", import_key=import_key)
+            raise
+
+    async def register_import(self, import_key: str, inquiry_id: UUID) -> None:
+        statement = insert(InquiryImport).values(
+            import_key=import_key, inquiry_id=inquiry_id, prepared=False
+        )
+        statement = statement.on_conflict_do_update(
+            index_elements=["import_key"],
+            set_={"inquiry_id": inquiry_id},
+            where=and_(
+                col(InquiryImport.prepared).is_(False),
+                col(InquiryImport.inquiry_id).is_(None),
+            ),
+        ).returning(col(InquiryImport.import_key))
+        try:
+            if (await self.session.execute(statement)).scalar_one_or_none() is None:
+                raise ValueError("Email import is already registered")
+        except SQLAlchemyError:
+            logger.exception(
+                "inquiry_import_registration_failed", import_key=import_key
+            )
+            raise
+
+    async def mark_import_prepared(self, inquiry_id: UUID) -> None:
+        try:
+            await self.session.execute(
+                update(InquiryImport)
+                .where(col(InquiryImport.inquiry_id) == inquiry_id)
+                .values(prepared=True)
+            )
+        except SQLAlchemyError:
+            logger.exception(
+                "inquiry_import_preparation_failed", inquiry_id=str(inquiry_id)
+            )
+            raise
 
     async def get_extraction(
         self, job_id: UUID, *, for_update: bool = False

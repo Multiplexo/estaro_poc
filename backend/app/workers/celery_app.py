@@ -2,7 +2,10 @@
 
 from uuid import UUID
 
-from celery import Celery
+import structlog
+from celery import Celery, Task
+from celery.signals import task_postrun, task_prerun
+from celery.states import SUCCESS
 from fastapi.concurrency import run_in_threadpool
 from kombu.exceptions import OperationalError
 from redis.exceptions import RedisError
@@ -11,6 +14,8 @@ from app.config import get_settings
 from app.models.jobs.extraction import ExtractionQueueUnavailable
 from app.models.jobs.matching import MatchingQueueUnavailable
 
+logger = structlog.get_logger(__name__)
+
 celery_app = Celery(
     "estaro",
     broker=get_settings().CELERY_BROKER_URL,
@@ -18,8 +23,10 @@ celery_app = Celery(
         "app.workers.extraction_tasks",
         "app.workers.matching_tasks",
         "app.workers.cleanup_tasks",
+        "app.workers.outlook_tasks",
     ],
 )
+
 celery_app.conf.update(
     task_default_queue="extraction",
     task_serializer="json",
@@ -41,6 +48,39 @@ celery_app.conf.update(
         }
     },
 )
+
+if get_settings().MS_FETCH_ENABLED:
+    celery_app.conf.beat_schedule["outlook_fetch"] = {
+        "task": "outlook.fetch",
+        "schedule": float(get_settings().MS_FETCH_INTERVAL_SECONDS),
+        "options": {
+            "queue": "extraction",
+            "expires": get_settings().MS_FETCH_INTERVAL_SECONDS,
+        },
+    }
+
+
+@task_prerun.connect
+def log_task_started(task_id: str, task: Task, **kwargs: object) -> None:
+    logger.info(
+        "celery_task_started",
+        task_id=task_id,
+        task_name=task.name,
+        queue=task.request.delivery_info.get("routing_key"),
+    )
+
+
+@task_postrun.connect
+def log_task_succeeded(task_id: str, task: Task, state: str, **kwargs: object) -> None:
+    if state != SUCCESS:
+        return
+
+    logger.info(
+        "celery_task_succeeded",
+        task_id=task_id,
+        task_name=task.name,
+        queue=task.request.delivery_info.get("routing_key"),
+    )
 
 
 async def publish_matching(job_id: UUID) -> None:

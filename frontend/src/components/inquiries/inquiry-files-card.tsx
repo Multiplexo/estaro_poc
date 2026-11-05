@@ -12,7 +12,7 @@ export function InquiryFilesCard({ inquiry }: { inquiry: InquiryResponse }) {
     <CardContent>
       <ul className="divide-y">
         {inquiry.documents.map((document) => <li key={document.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-          {document.file_type === 'msg' ? <MailIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" /> : <FileTextIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />}
+          {document.file_type !== 'pdf' ? <MailIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" /> : <FileTextIcon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />}
           <div className="min-w-0 flex-1"><p className="text-sm [overflow-wrap:anywhere]">{document.filename}</p><p className="mt-1 text-xs text-muted-foreground">{document.parent_document_id ? 'Anhang · ' : ''}{document.file_type.toUpperCase()}{pending === document.id ? ' · Wird geladen …' : ''}</p></div>
           <Button variant="ghost" size="icon" className="size-10" aria-label={`${document.filename} herunterladen`} title="Herunterladen" disabled onClick={() => void download(document)}><DownloadIcon /></Button>
         </li>)}

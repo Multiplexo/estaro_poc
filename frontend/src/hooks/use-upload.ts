@@ -11,8 +11,7 @@ export function useUpload(onSuccess: () => void) {
   const [validationError, setValidationError] = useState<string>()
   const mutation = useMutation({
     mutationFn: async (selected: File) => {
-      const pdf = new File([selected], selected.name, { type: 'application/pdf' })
-      return (await api.extractions.extraction({ file: pdf })).data
+      return (await api.extractions.extraction({ file: selected })).data
     },
     onSuccess: async (job, selected) => {
       await trackExtraction(client, job, selected.name)
@@ -26,8 +25,8 @@ export function useUpload(onSuccess: () => void) {
   function selectFile(selected?: File) {
     mutation.reset()
     setFile(selected)
-    setValidationError(selected && (!selected.name.toLowerCase().endsWith('.pdf') || !selected.size)
-      ? 'Bitte eine nicht leere PDF-Datei auswählen.' : undefined)
+    setValidationError(selected && (!/\.(pdf|msg|eml)$/i.test(selected.name) || !selected.size)
+      ? 'Bitte eine nicht leere PDF-, MSG- oder EML-Datei auswählen.' : undefined)
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

@@ -2,12 +2,15 @@ from uuid import UUID
 
 import structlog
 from fastapi import HTTPException
+from fastapi.concurrency import run_in_threadpool
 from minio.error import MinioException, S3Error
 from urllib3.exceptions import HTTPError
 
 from app.models.api.documents import DocumentUrl
+from app.models.domain.documents import DocumentSection
 from app.models.domain.inquiries import InquiryDocument
 from app.persistence.domain.inquiries.inquiry_repository import InquiryRepository
+from app.services.shared.email import parse_email
 from app.services.shared.minio import MinioService
 
 logger = structlog.get_logger(__name__)
@@ -70,3 +73,20 @@ class InquiryDocumentService:
             raise HTTPException(
                 status_code=503, detail="File storage unavailable"
             ) from exc
+
+    async def sections(
+        self, inquiry_id: UUID, document_id: UUID
+    ) -> list[DocumentSection]:
+        document = await self.get(inquiry_id, document_id)
+        if not document.file_type.is_email:
+            return []
+        content = await self.download(document)
+        try:
+            email = await run_in_threadpool(
+                parse_email, content, document.file_type, include_attachments=False
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail="Email content could not be read"
+            ) from exc
+        return email.sections

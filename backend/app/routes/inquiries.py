@@ -12,6 +12,7 @@ from app.dependencies import (
     get_inquiry_service,
 )
 from app.models.api.documents import DocumentUrl
+from app.models.domain.documents import DocumentSection
 from app.models.domain.inquiries import (
     Inquiry,
     InquiryExtractionSnapshot,
@@ -90,6 +91,16 @@ async def list_inquiry_extractions(
     return await service.list_extractions(
         inquiry_id, pagination.offset, pagination.limit
     )
+
+
+@router.get(
+    "/{inquiry_id}/documents/{document_id}/sections",
+    operation_id="get_inquiry_document_sections",
+)
+async def get_inquiry_document_sections(
+    inquiry_id: UUID, document_id: UUID, service: DocumentServiceDep
+) -> list[DocumentSection]:
+    return await service.sections(inquiry_id, document_id)
 
 
 @router.get(

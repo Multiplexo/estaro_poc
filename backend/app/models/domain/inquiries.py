@@ -16,12 +16,18 @@ from app.models.shared.pagination import Pagination
 class FileType(StrEnum):
     PDF = "pdf"
     MSG = "msg"
+    EML = "eml"
+
+    @property
+    def is_email(self) -> bool:
+        return self in {FileType.MSG, FileType.EML}
 
     @property
     def media_type(self) -> str:
         return {
             FileType.PDF: "application/pdf",
             FileType.MSG: "application/vnd.ms-outlook",
+            FileType.EML: "message/rfc822",
         }[self]
 
 

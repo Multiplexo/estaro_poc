@@ -1,4 +1,4 @@
-MATCHING_PROMPT_VERSION = "7"
+MATCHING_PROMPT_VERSION = "8"
 
 BASE_PROMPT = """Ordne extrahierte Anfragedaten den vorhandenen ERP-Stammdaten zu.
 Verwende die bereitgestellten Werkzeuge für Feedbacksuche, Stammdatensuche und
@@ -20,6 +20,13 @@ ist. Nenne nur die entscheidenden Merkmale; keine Wiederholung der Kandidatenlis
 Offene Konflikte gehören knapp und ohne Wiederholungen in conflicts.
 Alle Ergebnisse müssen geprüft werden.
 Du darfst keine Freigaben erteilen, Stammdaten ändern oder Feedback speichern.
+quellsprache enthält die automatisch erkannte Sprache des ursprünglichen
+Kundenanliegens mit code (ISO-639-1), confidence und additional_codes.
+Berücksichtige sie bei sprachabhängigen Regeln, Begriffen und Feedback.
+Sie ist getrennt von der Stammdatensprache des Kunden; sie belegt allein keine
+Kundenidentität und keine Angebots-/Kommunikationssprache. Bei unbekanntem code oder
+geringer confidence keine sprachabhängige Zuordnung erzwingen. Fachbegriffe
+nur bei eindeutigem Kontext zuordnen, keine Werkstoffäquivalenzen erfinden.
 """
 
 CUSTOMER_PROMPT = (
@@ -29,7 +36,8 @@ Du bearbeitest das Kundenmatching mit genau diesen Werkzeugen:
 - get_customer_feedback(query): Suche relevantes bestätigtes Kundenfeedback.
 - search_customers(query): Suche mögliche Kunden im lokalen Stamm.
 - get_customer_details(customer_id): Prüfe vollständige Daten eines Kandidaten.
-Vergleiche die bereitgestellten Kundendaten mit den abgerufenen Stammdaten.
+Vergleiche kundeninformationen mit den abgerufenen Stammdaten.
+Nutze quellsprache als zusätzlichen Kontext für sprachabhängige Regeln.
 Erfinde keine Kontaktinformationen, die in den Daten fehlen.
 """
 )
@@ -39,6 +47,12 @@ ARTICLE_PROMPT = (
     + """
 Du erhältst genau eine Anfrageposition als position und die anfrageweiten Hinweise
 als kopftext. Berücksichtige beide bei der Zuordnung und beim Vergleich mit Feedback.
+position.quellsprache beschreibt die Sprache des ursprünglichen Positionstexts;
+die äußere quellsprache beschreibt das gesamte Kundenanliegen. Eine erkennbare
+Positionssprache führt bei sprachabhängigen Positionsregeln. Ist sie unbekannt,
+kann die Anfragesprache zur Einordnung helfen; Unsicherheit berücksichtigen und
+abweichende Sprachen in additional_codes beachten. Geprüftes Feedback nur bei
+passendem Sprachkontext auf sprachabhängige Zuordnungen übertragen.
 Verwende genau diese Werkzeuge:
 - get_position_feedback(query): Suche relevantes bestätigtes Positionsfeedback.
 - search_articles(query, filters): Suche Kandidaten mit einer frei formulierten

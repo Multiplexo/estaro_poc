@@ -21,7 +21,7 @@ export function UploadDialog({ open, onOpenChange, triggerRef }: UploadDialogPro
         <DialogHeader>
           <DialogTitle>Anfrage hochladen</DialogTitle>
           <DialogDescription>
-            Eine PDF-Datei hochladen und als Anfrage extrahieren lassen.
+            Eine PDF-Datei oder E-Mail (.msg, .eml) hochladen und als Anfrage extrahieren lassen.
           </DialogDescription>
         </DialogHeader>
         <UploadForm onSuccess={() => onOpenChange(false)} />

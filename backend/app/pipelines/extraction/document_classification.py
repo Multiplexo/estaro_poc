@@ -13,11 +13,13 @@ from docling_core.transforms.serializer.doctags import (
 from docling_core.types.doc.document import DoclingDocument
 from docling_core.types.doc.items.node import DocItem
 
+from app.models.domain.inquiries import InquiryDocument
 from app.models.jobs.extraction import (
     CitationBBox,
     CitationSource,
     ClassifiedDocument,
 )
+from app.services.shared.email import parse_email
 
 logger = structlog.get_logger(__name__)
 
@@ -51,10 +53,14 @@ def _get_page_images(document: DoclingDocument) -> list[str]:
         if not image_uri.startswith("data:image/png;base64,"):
             raise ConversionError(f"Expected an inline PNG for PDF page {page_number}")
         page_images.append(image_uri)
+    if not page_images:
+        raise ConversionError("PDF conversion did not produce any page images")
     return page_images
 
 
-def _build_classified_document(document: DoclingDocument) -> ClassifiedDocument:
+def _build_classified_document(
+    document: DoclingDocument, document_id: str
+) -> ClassifiedDocument:
     serializer = DocTagsDocSerializer(
         doc=document, params=DocTagsParams(add_table_cell_location=True)
     )
@@ -80,26 +86,44 @@ def _build_classified_document(document: DoclingDocument) -> ClassifiedDocument:
                 bbox=CitationBBox(l=bbox.l, t=bbox.t, r=bbox.r, b=bbox.b),
             )
     return ClassifiedDocument(
-        doctags="\n".join(sections),
+        document_id=document_id,
+        content="\n".join(sections),
         page_images=_get_page_images(document),
         sources=sources,
     )
 
 
-def document_classification(document: bytes) -> ClassifiedDocument:
+def document_classification(
+    document: bytes, source: InquiryDocument
+) -> ClassifiedDocument:
+    if source.file_type.is_email:
+        email = parse_email(document, source.file_type, include_attachments=False)
+        return ClassifiedDocument(
+            document_id=str(source.id),
+            content="\n\n".join(
+                f"section_id={section.id}\n{section.text}"
+                for section in email.sections
+                if section.text.strip()
+            ),
+            sources={
+                section.id: CitationSource(text=section.text)
+                for section in email.sections
+                if section.text.strip()
+            },
+        )
     if not document.startswith(b"%PDF-"):
         raise ValueError("Document must contain a PDF")
 
     try:
         converted = _convert_document(document)
-        classified = _build_classified_document(converted)
+        classified = _build_classified_document(converted, str(source.id))
     except Exception:
         logger.exception("extraction_doctags_conversion_failed")
         raise
 
     logger.info(
         "extraction_doctags_converted",
-        characters=len(classified.doctags),
+        characters=len(classified.content),
         page_count=len(classified.page_images),
         source_count=len(classified.sources),
     )

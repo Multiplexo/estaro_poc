@@ -46,16 +46,18 @@ class ExtractionExecutionService:
             await self.extractions.progress(job_id, step, completed_steps)
 
         try:
-            if not job.source_key or job.document_id is None:
+            if not job.source_key or job.document_id is None or job.inquiry_id is None:
                 raise ValueError("Extraction job must reference a source and document")
             prompt = await self.rules.prompt(RuleCategory.EXTRACTION)
+            documents = await self.extractions.source_documents(
+                job.inquiry_id, job.document_id
+            )
             async with OpenAIService(self.settings) as openai:
                 result = await run_pipeline(
-                    job.source_key,
+                    documents,
                     self.storage,
                     openai,
                     report_progress,
-                    job.document_id,
                     self.settings.EXTRACTION_CONFIDENCE_THRESHOLD,
                     prompt,
                 )

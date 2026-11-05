@@ -10,12 +10,14 @@ from fastapi.responses import JSONResponse
 from psycopg import Error as PsycopgError
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.config import get_settings
 from app.models.api.health import RootResponse
 from app.routes.articles import router as articles_router
 from app.routes.customers import router as customers_router
 from app.routes.extractions import router as extractions_router
 from app.routes.inquiries import router as inquiries_router
 from app.routes.matching import router as matching_router
+from app.routes.outlook import router as outlook_router
 from app.routes.rules import router as rules_router
 from app.services.shared.database import database_service
 
@@ -39,7 +41,7 @@ app = FastAPI(title="Estaro API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
+        get_settings().MS_FRONTEND_URL,
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -61,6 +63,7 @@ app.include_router(inquiries_router, prefix="/inquiries", tags=["inquiries"])
 app.include_router(extractions_router, prefix="/extractions", tags=["extractions"])
 app.include_router(matching_router, prefix="/extractions", tags=["matching"])
 app.include_router(rules_router, prefix="/rules", tags=["rules"])
+app.include_router(outlook_router, prefix="/auth", tags=["outlook"])
 
 
 @app.get("/", response_model=RootResponse, operation_id="get_root")

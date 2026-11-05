@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.models.domain.language import DetectedLanguage
+
 
 class Ort(BaseModel):
     land: str | None = None
@@ -90,6 +92,7 @@ class Angebotsdetails(BaseModel):
 
 
 class InquiryPosition(BaseModel):
+    quellsprache: DetectedLanguage = Field(default_factory=DetectedLanguage)
     nr: str | None = None
     typ: str | None = None
     artikel: str | None = None
@@ -126,6 +129,7 @@ class InquiryFieldMatch(BaseModel):
 
 
 class InquiryData(BaseModel):
+    quellsprache: DetectedLanguage = Field(default_factory=DetectedLanguage)
     kundeninformationen: Kundeninformationen | None = None
     beleginformationen: Beleginformationen | None = None
     lieferadresse: Lieferadresse | None = None

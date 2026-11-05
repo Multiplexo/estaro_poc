@@ -8,9 +8,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.domain.articles import Article
 from app.models.domain.customers import Customer
-from app.models.domain.inquiry_data import InquiryData, InquiryPosition
+from app.models.domain.inquiry_data import InquiryData
 from app.models.jobs.matching import (
-    ArticleMatchingInput,
     MatchCandidate,
     MatchDecision,
     MatchResult,
@@ -62,9 +61,7 @@ class MatchingAgents:
             {key: customer_candidate(value) for key, value in candidates.items()},
         )
 
-    async def article(
-        self, position: InquiryPosition, header: str | None = None
-    ) -> MatchResult:
+    async def article(self, data: InquiryData, position_index: int) -> MatchResult:
         candidates: dict[str, Article] = {}
         agent = create_agent(
             self.openai.get_chat_model(),
@@ -76,9 +73,7 @@ class MatchingAgents:
             store=self.memory.store,
             name="article_matching",
         )
-        source = ArticleMatchingInput(
-            position=position, kopftext=header
-        ).model_dump_json(exclude_none=True)
+        source = matching_input(data, "article", position_index)
         response = await agent.ainvoke(
             {
                 "messages": [

@@ -18,7 +18,7 @@ function NotFound() {
 function RootLayout() {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const section = pathname.startsWith('/kunden') ? 'Kunden' : pathname.startsWith('/artikel') ? 'Artikel' : pathname.startsWith('/regeln') ? 'Regeln' : 'Anfragen'
+  const section = pathname.startsWith('/kunden') ? 'Kunden' : pathname.startsWith('/artikel') ? 'Artikel' : pathname.startsWith('/regeln') ? 'Regeln' : pathname.startsWith('/einstellungen') ? 'Einstellungen' : 'Anfragen'
   return (
     <TooltipProvider>
       <SidebarProvider>

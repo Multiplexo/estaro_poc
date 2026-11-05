@@ -2,7 +2,6 @@ import asyncio
 
 import structlog
 
-from app.models.domain.inquiry_data import InquiryPosition
 from app.models.jobs.matching import (
     ArticleMatchResult,
     MatchingJobStatus,
@@ -35,12 +34,10 @@ async def run_matching_pipeline(
         )
         return result
 
-    async def match_position(
-        index: int, position: InquiryPosition
-    ) -> ArticleMatchResult:
+    async def match_position(index: int) -> ArticleMatchResult:
         async with semaphore:
             try:
-                result = await agents.article(position, job.input_data.kopftext)
+                result = await agents.article(job.input_data, index)
             except Exception:
                 logger.exception(
                     "article_matching_failed", job_id=str(job.id), position_index=index
@@ -62,8 +59,8 @@ async def run_matching_pipeline(
         async with asyncio.TaskGroup() as group:
             customer_task = group.create_task(match_customer())
             article_tasks = [
-                group.create_task(match_position(index, position))
-                for index, position in enumerate(job.input_data.positionen or [])
+                group.create_task(match_position(index))
+                for index in range(len(job.input_data.positionen or []))
             ]
         customer = customer_task.result()
         articles = [task.result() for task in article_tasks]

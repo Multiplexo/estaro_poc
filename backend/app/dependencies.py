@@ -22,6 +22,7 @@ from app.services.factory import (
     create_matching_service,
     create_review_service,
     create_rule_service,
+    create_upload_service,
 )
 from app.services.jobs.extractions import ExtractionService
 from app.services.jobs.matching import MatchingService
@@ -75,17 +76,9 @@ async def get_inquiry_service(
 
 async def get_upload_service(
     session: SessionDep,
-    extractions: Annotated[ExtractionService, Depends(get_extraction_service)],
-    cleanup: Annotated[InquiryService, Depends(get_inquiry_service)],
     storage: MinioServiceDep,
 ) -> ExtractionUploadService:
-    return ExtractionUploadService(
-        extractions,
-        InquiryRepository(session),
-        cleanup,
-        storage,
-        TransactionService(session),
-    )
+    return create_upload_service(session, storage, publish_extraction, publish_matching)
 
 
 async def get_document_service(

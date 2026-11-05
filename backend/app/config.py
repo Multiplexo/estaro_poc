@@ -2,10 +2,11 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlsplit
 
 import structlog
 from fastapi import Depends
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.logging import RichHandler
 
@@ -37,6 +38,30 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str = ""
     MODEL: str = "gtp-6.1-luna"
+
+    MS_CLIENT_ID: str = ""
+    MS_CLIENT_SECRET: str = ""
+    MS_AUTHORITY: str = "https://login.microsoftonline.com/consumers"
+    MS_REDIRECT_URI: str = "http://localhost:8000/auth/callback"
+    MS_FRONTEND_URL: str = "http://localhost:5173"
+    MS_FETCH_ENABLED: bool = False
+    MS_FETCH_INTERVAL_SECONDS: int = Field(default=300, ge=1)
+
+    @field_validator("MS_FRONTEND_URL")
+    @classmethod
+    def validate_frontend_url(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.netloc
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in {"", "/"}
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("MS_FRONTEND_URL must be an HTTP or HTTPS origin")
+        return value.rstrip("/")
 
     model_config = SettingsConfigDict(
         env_file=(

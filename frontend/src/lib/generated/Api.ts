@@ -11,7 +11,7 @@
  */
 
 /** FileType */
-export type FileType = "pdf" | "msg";
+export type FileType = "pdf" | "msg" | "eml";
 
 /** ExtractionStatus */
 export type ExtractionStatus = "queued" | "running" | "succeeded" | "failed";
@@ -494,6 +494,24 @@ export interface Customer {
   discount_list_name?: string | null;
 }
 
+/** DetectedLanguage */
+export interface DetectedLanguage {
+  /** ISO-639-1-Code der automatisch erkannten Hauptsprache, z. B. de oder en. */
+  code?: string | null;
+  /** Sicherheit der Spracherkennung von 0 bis 1. */
+  confidence?: number;
+  /** Weitere erkannte Sprachen ohne Hauptsprache oder Duplikate. */
+  additional_codes?: string[];
+}
+
+/** DocumentSection */
+export interface DocumentSection {
+  /** Id */
+  id: string;
+  /** Text */
+  text: string;
+}
+
 /** DocumentUrl */
 export interface DocumentUrl {
   /** Url */
@@ -557,6 +575,7 @@ export interface ExtractedField {
  * Eine angefragte Position, getrennt von den übrigen Positionen.
  */
 export interface ExtractedItem {
+  quellsprache?: DetectedLanguage;
   /** Artikelart und ausdrückliche Ausführung, z. B. nahtloses Rohr, geschweißtes Rohr, Rundstahl oder Rohrbogen. Kunden-Artikelnummern sind keine ESTARO-Artikelnummern. */
   bezeichnung?: ExtractedField;
   /** Werkstoffgüte, z. B. 1.4841. */
@@ -676,6 +695,7 @@ export interface Inquiry {
 
 /** InquiryData */
 export interface InquiryData {
+  quellsprache?: DetectedLanguage;
   kundeninformationen?: Kundeninformationen | null;
   beleginformationen?: Beleginformationen | null;
   lieferadresse?: Lieferadresse | null;
@@ -739,6 +759,7 @@ export interface InquiryDocument {
  * Eingehende ESTARO-Anfrage mit wörtlichen Belegen für jedes extrahierte Feld.
  */
 export interface InquiryExtraction {
+  quellsprache?: DetectedLanguage;
   kundeninformationen?: ExtractedCustomer;
   /** Explizite Anfragenummer des Kunden, auch unter 'Ihre Belegnummer'. Keine Bestell-, Zeichnungs-, Angebots- oder Positionsnummer. */
   anfragenummer?: ExtractedField;
@@ -830,6 +851,7 @@ export interface InquiryOverviewPage {
 
 /** InquiryPosition */
 export interface InquiryPosition {
+  quellsprache?: DetectedLanguage;
   /** Nr */
   nr?: string | null;
   /** Typ */
@@ -1448,6 +1470,26 @@ export class Api<
         path: `/inquiries/${inquiryId}/extractions`,
         method: "GET",
         query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags inquiries
+     * @name GetInquiryDocumentSections
+     * @summary Get Inquiry Document Sections
+     * @request GET:/inquiries/{inquiry_id}/documents/{document_id}/sections
+     */
+    getInquiryDocumentSections: (
+      inquiryId: string,
+      documentId: string,
+      params: RequestParams = {},
+    ) =>
+      this.request<DocumentSection[], HTTPValidationError>({
+        path: `/inquiries/${inquiryId}/documents/${documentId}/sections`,
+        method: "GET",
         format: "json",
         ...params,
       }),

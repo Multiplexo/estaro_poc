@@ -28,22 +28,28 @@ export function inquiryResponse(inquiry: Inquiry): InquiryResponse {
   return { ...inquiry, id: inquiry.id, documents, processing_job: null }
 }
 
-function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse): ExtractionResult {
+function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse, sources: NonNullable<AnalysisResponse['sources']> = []): ExtractionResult {
   const documentsById = new Map(inquiry.documents.map((document) => [document.id, document]))
+  const sectionsByDocument = new Map(sources.map((source) => [source.id, new Map((source.sections ?? []).map((section) => [section.id, section.text]))]))
   const field = (value: ExtractedField | undefined): VerifiedField => ({
     value: value?.value ?? null, status: value?.status ?? 'missing', note: value?.note,
     confidence: value?.confidence ?? 0,
-    sources: (value?.citations ?? []).map((citation) => ({
-      document_id: citation.document_id,
-      filename: documentsById.get(citation.document_id)?.filename ?? 'Dokument',
-      section_id: citation.section_id, quote: citation.quote,
-      page: citation.page_number, start: 0, end: Array.from(citation.quote).length,
-      rectangles: citation.bbox && citation.page_width && citation.page_height ? [{
-        x: citation.bbox.l / citation.page_width, y: citation.bbox.t / citation.page_height,
-        width: (citation.bbox.r - citation.bbox.l) / citation.page_width,
-        height: (citation.bbox.b - citation.bbox.t) / citation.page_height,
-      }] : [],
-    })),
+    sources: (value?.citations ?? []).map((citation) => {
+      const text = sectionsByDocument.get(citation.document_id)?.get(citation.section_id)
+      const offset = text?.indexOf(citation.quote) ?? -1
+      const start = text !== undefined && offset >= 0 ? Array.from(text.slice(0, offset)).length : 0
+      return {
+        document_id: citation.document_id,
+        filename: documentsById.get(citation.document_id)?.filename ?? 'Dokument',
+        section_id: citation.section_id, quote: citation.quote,
+        page: citation.page_number, start, end: start + Array.from(citation.quote).length,
+        rectangles: citation.bbox && citation.page_width && citation.page_height ? [{
+          x: citation.bbox.l / citation.page_width, y: citation.bbox.t / citation.page_height,
+          width: (citation.bbox.r - citation.bbox.l) / citation.page_width,
+          height: (citation.bbox.b - citation.bbox.t) / citation.page_height,
+        }] : [],
+      }
+    }),
   })
   return {
     review_mode: 'fields',
@@ -63,11 +69,19 @@ function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse): 
 }
 
 export async function loadAnalysis(api: ApiClient, inquiry: InquiryResponse, params: RequestParams = {}): Promise<AnalysisResponse> {
-  const { data } = await api.inquiries.listInquiryExtractions(inquiry.id, { limit: 1 }, params)
+  const [{ data }, sources] = await Promise.all([
+    api.inquiries.listInquiryExtractions(inquiry.id, { limit: 1 }, params),
+    Promise.all(inquiry.documents.map(async (document) => ({
+      ...document,
+      sections: document.file_type !== 'pdf'
+        ? (await api.inquiries.getInquiryDocumentSections(inquiry.id, document.id, params)).data
+        : [],
+    }))),
+  ])
   return {
     job_id: data[0]?.job_id,
-    sources: inquiry.documents.map((document) => ({ ...document, sections: [] })),
-    extraction: data[0] ? extractionResult(data[0].result, inquiry) : null,
+    sources,
+    extraction: data[0] ? extractionResult(data[0].result, inquiry, sources) : null,
     review: inquiryReview(data[0]?.review),
   }
 }

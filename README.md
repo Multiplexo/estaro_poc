@@ -15,4 +15,8 @@ uv --directory backend run uvicorn app.main:app --reload
 
 # Local worker (separate terminal; PostgreSQL and Redis must be running)
 uv --directory backend run celery -A app.workers.celery_app:celery_app worker --pool=solo --queues=extraction --loglevel=info
+
+# Local scheduler (another terminal; keep running alongside the worker)
+# Schedules Outlook fetches when MS_FETCH_ENABLED=true, plus periodic cleanup
+uv --directory backend run celery -A app.workers.celery_app:celery_app beat --loglevel=info --schedule=/tmp/estaro-celerybeat-schedule
 ```

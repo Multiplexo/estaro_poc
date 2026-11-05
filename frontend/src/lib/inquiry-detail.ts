@@ -24,7 +24,7 @@ function extractionNotice(inquiry: InquiryResponse, analysis: AnalysisResponse) 
 
 export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisResponse) {
   const sources = analysis.sources ?? []
-  const emails = sources.filter((source) => source.file_type === 'msg')
+  const emails = sources.filter((source) => source.file_type !== 'pdf')
   const email = emails.find((source) => !source.parent_document_id) ?? emails[0]
   const result = analysis.extraction
   const review = reviewDraft(analysis.review)

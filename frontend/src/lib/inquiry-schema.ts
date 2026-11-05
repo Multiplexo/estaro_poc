@@ -5,8 +5,8 @@ type StringFieldPaths<T> = {
     : NonNullable<T[Key]> extends object ? `${Key}.${StringFieldPaths<NonNullable<T[Key]>>}` : never
 }[keyof T & string]
 
-export type InquiryFieldPath = StringFieldPaths<Omit<InquiryData, 'positionen' | 'matching_provenance'>>
-type InquiryGroup = Exclude<keyof InquiryData, 'positionen' | 'matching_provenance'>
+export type InquiryFieldPath = StringFieldPaths<Omit<InquiryData, 'positionen' | 'matching_provenance' | 'quellsprache'>>
+type InquiryGroup = Exclude<keyof InquiryData, 'positionen' | 'matching_provenance' | 'quellsprache'>
 
 export interface SchemaFieldDefinition<Path extends string> { path: Path; label: string; group?: InquiryGroup; groupLabel?: string }
 
@@ -79,7 +79,7 @@ export const inquirySchemaFields: SchemaFieldDefinition<InquiryFieldPath>[] = [
   {"path": "angebotsdetails.kundenquelle", "group": "angebotsdetails", "groupLabel": "Angebotsdetails", "label": "Kundenquelle"},
 ]
 
-export const positionSchemaFields: SchemaFieldDefinition<keyof InquiryPosition>[] = [
+export const positionSchemaFields: SchemaFieldDefinition<Exclude<keyof InquiryPosition, 'quellsprache'>>[] = [
   {"path": "nr", "label": "Nr."},
   {"path": "typ", "label": "Typ"},
   {"path": "artikel", "label": "Artikel"},

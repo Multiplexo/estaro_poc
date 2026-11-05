@@ -37,12 +37,29 @@ from app.services.shared.transactions import TransactionService
 logger = structlog.get_logger(__name__)
 
 
-def validate_citations(result: InquiryExtraction, document_id: UUID) -> None:
+def validate_citations(
+    result: InquiryExtraction, documents: list[InquiryDocumentModel]
+) -> None:
+    by_id = {str(document.id): document for document in documents}
     for _, field in extraction_fields(result):
         for citation in field.citations:
-            if citation.document_id != str(document_id):
-                raise ValueError("Citation must reference the extraction document")
-            if (
+            document = by_id.get(citation.document_id)
+            if document is None:
+                raise ValueError(
+                    "Citation must reference an extraction source document"
+                )
+            if document.file_type.is_email:
+                if any(
+                    value is not None
+                    for value in (
+                        citation.bbox,
+                        citation.page_number,
+                        citation.page_width,
+                        citation.page_height,
+                    )
+                ):
+                    raise ValueError("Email citations must not have page coordinates")
+            elif (
                 citation.bbox is None
                 or citation.page_number is None
                 or citation.page_width is None
@@ -77,11 +94,57 @@ class ExtractionService:
                 inquiry_id=inquiry.id,
                 filename=request.filename,
                 source_key=request.source_key,
-                file_type=FileType.PDF,
+                file_type=request.file_type,
             )
             await self.inquiries.save_document(document)
+            if request.import_key:
+                await self.inquiries.register_import(request.import_key, inquiry.id)
             response = document.to_model()
         return response
+
+    async def register_attachments(
+        self, parent: InquiryDocumentModel, filenames: list[str]
+    ) -> list[InquiryDocumentModel]:
+        if not filenames:
+            return []
+        async with self.transactions.atomic():
+            inquiry = await self.inquiries.get_record(
+                parent.inquiry_id, for_update=True
+            )
+            if inquiry is None or inquiry.deletion_requested_at is not None:
+                raise HTTPException(
+                    status_code=409, detail="Inquiry is no longer available"
+                )
+            documents: list[InquiryDocumentModel] = []
+            for filename in filenames:
+                document = InquiryDocument(
+                    inquiry_id=parent.inquiry_id,
+                    parent_document_id=parent.id,
+                    filename=filename,
+                    file_type=FileType.PDF,
+                )
+                document.source_key = str(document.id)
+                await self.inquiries.save_document(document)
+                documents.append(document.to_model())
+        return documents
+
+    async def source_documents(
+        self, inquiry_id: UUID, document_id: UUID
+    ) -> list[InquiryDocumentModel]:
+        documents = await self.inquiries.list_documents(inquiry_id)
+        root = next(
+            (document for document in documents if document.id == document_id), None
+        )
+        if root is None:
+            raise ValueError("Extraction document must belong to the inquiry")
+        return [
+            root,
+            *[
+                document
+                for document in documents
+                if document.parent_document_id == root.id
+            ],
+        ]
 
     async def prepare_upload(
         self, document: InquiryDocumentModel
@@ -92,6 +155,7 @@ class ExtractionService:
             document_id=document.id,
         )
         await self.repository.save(job)
+        await self.inquiries.mark_import_prepared(document.inquiry_id)
         return job.to_model()
 
     async def get_latest(self, inquiry_id: UUID) -> ExtractionJobStatus | None:
@@ -208,7 +272,8 @@ class ExtractionService:
             document = await self.inquiries.get_document(source.document_id)
             if document is None or document.inquiry_id != inquiry.id:
                 raise ValueError("Extraction document must belong to the inquiry")
-            validate_citations(result, document.id)
+            documents = await self.source_documents(inquiry.id, document.id)
+            validate_citations(result, documents)
             snapshot = ExtractionSnapshot(
                 inquiry_id=inquiry.id,
                 job_id=job_id,

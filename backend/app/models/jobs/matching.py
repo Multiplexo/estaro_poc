@@ -4,7 +4,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.domain.inquiry_data import InquiryData, InquiryPosition
+from app.models.domain.inquiry_data import (
+    InquiryData,
+    InquiryPosition,
+    Kundeninformationen,
+)
+from app.models.domain.language import DetectedLanguage
 from app.models.jobs.extraction import ExtractionStatus
 
 MatchCategory = Literal["customer", "article"]
@@ -17,14 +22,21 @@ class MatchingQueueUnavailable(RuntimeError):
 class ArticleMatchingInput(BaseModel):
     position: InquiryPosition
     kopftext: str | None = None
+    quellsprache: DetectedLanguage = Field(default_factory=DetectedLanguage)
+
+
+class CustomerMatchingInput(BaseModel):
+    kundeninformationen: Kundeninformationen | None = None
+    quellsprache: DetectedLanguage = Field(default_factory=DetectedLanguage)
 
 
 def matching_input(
     data: InquiryData, category: MatchCategory, position_index: int | None = None
 ) -> str:
     if category == "customer":
-        source = data.kundeninformationen
-        return source.model_dump_json(exclude_none=True) if source else "{}"
+        return CustomerMatchingInput(
+            kundeninformationen=data.kundeninformationen, quellsprache=data.quellsprache
+        ).model_dump_json(exclude_none=True)
     if (
         position_index is None
         or position_index < 0
@@ -33,10 +45,10 @@ def matching_input(
     ):
         raise ValueError("A valid position index is required for article feedback")
     position = data.positionen[position_index]
-    if not position.model_dump(exclude_none=True):
+    if not position.model_dump(exclude_none=True, exclude={"quellsprache"}):
         return "{}"
     return ArticleMatchingInput(
-        position=position, kopftext=data.kopftext
+        position=position, kopftext=data.kopftext, quellsprache=data.quellsprache
     ).model_dump_json(exclude_none=True)
 
 

@@ -20,6 +20,7 @@ def map_extraction_to_inquiry(
     updated_fields: set[str] | None = None,
 ) -> InquiryData:
     data = existing.model_copy(deep=True) if existing else InquiryData()
+    data.quellsprache = extraction.quellsprache.model_copy(deep=True)
     reviewed = review.fields if review else {}
     values = {
         name: reviewed[name].value if name in reviewed else field.value
@@ -52,7 +53,10 @@ def map_extraction_to_inquiry(
         positions[index] if index < len(positions) else InquiryPosition()
         for index in range(len(extraction.positionen))
     ]
-    for index, _ in enumerate(extraction.positionen):
+    for index, position in enumerate(extraction.positionen):
+        data.positionen[index].quellsprache = position.quellsprache.model_copy(
+            deep=True
+        )
         assignments.update(
             {
                 f"positionen.{index}.{target}": (f"item-{index}-{name}",)
@@ -207,13 +211,14 @@ def inquiry_data_field_ids(position_count: int) -> set[str]:
         f"data:positionen.{index}.{name}"
         for index in range(position_count)
         for name in InquiryPosition.model_fields
+        if name != "quellsprache"
     }
 
 
 def _model_field_paths(model: type[BaseModel], prefix: str = "") -> list[str]:
     paths = []
     for name, field in model.model_fields.items():
-        if name in {"positionen", "matching_provenance"}:
+        if name in {"positionen", "matching_provenance", "quellsprache"}:
             continue
         annotation = next(
             (arg for arg in get_args(field.annotation) if arg is not type(None)),

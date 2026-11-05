@@ -27,22 +27,38 @@ logger = structlog.get_logger(__name__)
 
 
 def _ground_citations(
-    extraction: InquiryExtraction, document: ClassifiedDocument, document_id: str
+    extraction: InquiryExtraction, documents: list[ClassifiedDocument]
 ) -> InquiryExtraction:
+    sources = {
+        (document.document_id, section_id): source
+        for document in documents
+        for section_id, source in document.sources.items()
+    }
     for _, field in extraction_fields(extraction):
         for citation in field.citations:
-            source = document.sources.get(citation.section_id)
-            if citation.document_id != document_id or source is None:
+            source = sources.get((citation.document_id, citation.section_id))
+            if source is None:
                 raise ValueError("Citation must reference a known document section")
-            citation.bbox = source.bbox.model_copy()
+            if source.text is not None and citation.quote not in source.text:
+                raise ValueError(
+                    "Email citation must quote its source section verbatim"
+                )
+            citation.bbox = source.bbox.model_copy() if source.bbox else None
             citation.page_number = source.page_number
             citation.page_width = source.page_width
             citation.page_height = source.page_height
     return extraction
 
 
+def _source_content(documents: list[ClassifiedDocument]) -> str:
+    return "\n\n".join(
+        f'<source_document document_id="{document.document_id}">\n{document.content}\n</source_document>'
+        for document in documents
+    )
+
+
 async def _extract_structured[Result: ExtractionSchema](
-    document: ClassifiedDocument,
+    documents: list[ClassifiedDocument],
     prompt: str,
     schema: type[Result],
     openai: OpenAIService,
@@ -62,11 +78,21 @@ async def _extract_structured[Result: ExtractionSchema](
                     content=[
                         {"type": "text", "text": prompt},
                         *[
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": image, "detail": "high"},
-                            }
-                            for image in document.page_images
+                            block
+                            for document in documents
+                            for page_number, image in enumerate(
+                                document.page_images, start=1
+                            )
+                            for block in (
+                                {
+                                    "type": "text",
+                                    "text": f"document_id={document.document_id}, page_number={page_number}",
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": image, "detail": "high"},
+                                },
+                            )
                         ],
                     ]
                 )
@@ -77,35 +103,36 @@ async def _extract_structured[Result: ExtractionSchema](
 
 
 async def extract_inquiry(
-    document: ClassifiedDocument,
-    document_id: str,
+    documents: list[ClassifiedDocument],
     openai: OpenAIService,
     rules_prompt: str = "",
 ) -> InquiryExtraction:
     try:
         prompt = INQUIRY_EXTRACTION_PROMPT.format(
-            document_id=document_id, doctags=document.doctags
+            source_documents=_source_content(documents)
         )
         extraction = await _extract_structured(
-            document, prompt, InquiryExtraction, openai, rules_prompt
+            documents, prompt, InquiryExtraction, openai, rules_prompt
         )
-        extraction = _ground_citations(extraction, document, document_id)
+        extraction = _ground_citations(extraction, documents)
     except Exception:
-        logger.exception("inquiry_extraction_failed", document_id=document_id)
+        logger.exception("inquiry_extraction_failed")
         raise
 
     logger.info(
         "inquiry_extraction_completed",
-        document_id=document_id,
+        document_ids=[document.document_id for document in documents],
         item_count=len(extraction.positionen or []),
-        page_count=len(document.page_images),
+        page_count=sum(len(document.page_images) for document in documents),
+        source_language=extraction.quellsprache.code,
+        language_confidence=extraction.quellsprache.confidence,
+        additional_languages=extraction.quellsprache.additional_codes,
     )
     return extraction
 
 
 async def recheck_fields(
-    document: ClassifiedDocument,
-    document_id: str,
+    documents: list[ClassifiedDocument],
     extraction: InquiryExtraction,
     openai: OpenAIService,
     confidence_threshold: float,
@@ -119,19 +146,17 @@ async def recheck_fields(
         or field.confidence < confidence_threshold
     }
     if not fields_to_recheck:
-        logger.info("fields_recheck_skipped", document_id=document_id)
+        logger.info("fields_recheck_skipped")
         return extraction
 
     logger.info(
         "fields_recheck_started",
-        document_id=document_id,
         field_count=len(fields_to_recheck),
         confidence_threshold=confidence_threshold,
     )
     try:
         prompt = FIELDS_RECHECK_PROMPT.format(
-            document_id=document_id,
-            doctags=document.doctags,
+            source_documents=_source_content(documents),
             fields_to_recheck=json.dumps(fields_to_recheck, ensure_ascii=False),
             confidence_threshold=confidence_threshold,
             field_names=json.dumps(
@@ -145,7 +170,7 @@ async def recheck_fields(
             extraction=extraction.model_dump_json(),
         )
         recheck = await _extract_structured(
-            document, prompt, FieldsRecheck, openai, rules_prompt
+            documents, prompt, FieldsRecheck, openai, rules_prompt
         )
         updates = {field.field_id: field.result for field in recheck.fields}
         if (
@@ -170,14 +195,13 @@ async def recheck_fields(
             field.status = update.status
             field.citations = update.citations
             field.note = update.note
-        reviewed = _ground_citations(reviewed, document, document_id)
+        reviewed = _ground_citations(reviewed, documents)
     except Exception:
-        logger.exception("fields_recheck_failed", document_id=document_id)
+        logger.exception("fields_recheck_failed")
         raise
 
     logger.info(
         "fields_recheck_completed",
-        document_id=document_id,
         field_count=len(fields_to_recheck),
         low_confidence_count=sum(
             field.confidence < confidence_threshold for field in updates.values()

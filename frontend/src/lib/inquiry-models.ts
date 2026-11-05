@@ -1,4 +1,4 @@
-import type { Article, Customer, ExtractedField, Inquiry as ApiInquiry, InquiryDocument } from './generated/Api'
+import type { Article, Customer, ExtractedField, FileType, Inquiry as ApiInquiry, InquiryDocument } from './generated/Api'
 
 export type ArticleResponse = Article
 export type ArticleDetail = Article
@@ -87,7 +87,7 @@ export interface ReadingPage { number: number; width: number; height: number }
 export interface ReadingSource {
   id: string
   filename: string
-  file_type: 'pdf' | 'msg'
+  file_type: FileType
   parent_document_id?: string | null
   sections?: { id: string; text: string; page?: number | null }[]
   pages?: ReadingPage[]
@@ -100,7 +100,7 @@ export interface AnalysisResponse {
   review?: InquiryReview
 }
 export type InquiryOverview = InquiryResponse & AnalysisResponse & {
-  file_types: ('pdf' | 'msg')[]
+  file_types: FileType[]
   customer_name: string | null
   email: string | null
   email_received_at: string | null

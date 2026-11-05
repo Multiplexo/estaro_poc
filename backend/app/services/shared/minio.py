@@ -1,4 +1,7 @@
 from datetime import timedelta
+from io import BytesIO
+from pathlib import PurePath
+from typing import BinaryIO
 from urllib.parse import quote
 from uuid import UUID
 
@@ -10,6 +13,7 @@ from minio.error import MinioException, S3Error
 from urllib3.exceptions import HTTPError
 
 from app.config import Settings
+from app.models.domain.inquiries import FileType
 
 logger = structlog.get_logger(__name__)
 
@@ -35,6 +39,23 @@ class MinioService:
             region=settings.MINIO_REGION,
         )
 
+    async def upload_object(
+        self, source_key: str, content: bytes, content_type: str
+    ) -> None:
+        if not source_key:
+            raise ValueError("File source key must be set")
+        try:
+            await run_in_threadpool(
+                self._put_object,
+                source_key,
+                BytesIO(content),
+                len(content),
+                content_type,
+            )
+        except (MinioException, HTTPError, OSError):
+            logger.exception("object_upload_failed", source_key=source_key)
+            raise
+
     async def get_inquiry_file_url(
         self, source_key: str, filename: str, media_type: str
     ) -> str:
@@ -57,24 +78,37 @@ class MinioService:
             logger.exception("inquiry_file_url_failed", source_key=source_key)
             raise
 
-    async def validate_pdf(self, file: UploadFile) -> None:
-        if file.content_type != "application/pdf":
-            raise ValueError("File must have content type application/pdf")
+    async def validate_file(self, file: UploadFile) -> FileType:
+        suffix = PurePath(file.filename or "").suffix.lower().lstrip(".")
+        if suffix not in {FileType.PDF, FileType.MSG, FileType.EML}:
+            raise ValueError("File must be a PDF, MSG or EML email")
+        file_type = FileType(suffix)
         if file.size is None or file.size <= 0:
-            raise ValueError("PDF file must not be empty")
+            raise ValueError("File must not be empty")
+        if file_type == FileType.EML:
+            await file.seek(0)
+            return file_type
         await file.seek(0)
-        signature = await file.read(5)
+        signature = await file.read(8)
         await file.seek(0)
-        if signature != b"%PDF-":
-            raise ValueError("File must contain a PDF document")
+        expected = (
+            b"%PDF-"
+            if file_type == FileType.PDF
+            else b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+        )
+        if not signature.startswith(expected):
+            raise ValueError("File content does not match its PDF or MSG extension")
+        return file_type
 
     async def upload_inquiry_file(self, document_id: UUID, file: UploadFile) -> str:
         object_name = str(document_id)
         try:
-            await self.validate_pdf(file)
+            file_type = await self.validate_file(file)
             if file.size is None:
-                raise ValueError("PDF file size must be known")
-            await run_in_threadpool(self._upload_file, object_name, file, file.size)
+                raise ValueError("File size must be known")
+            await run_in_threadpool(
+                self._upload_file, object_name, file, file.size, file_type.media_type
+            )
         except (MinioException, HTTPError, OSError):
             logger.exception("inquiry_file_upload_failed", document_id=object_name)
             raise
@@ -116,7 +150,18 @@ class MinioService:
             response.close()
             response.release_conn()
 
-    def _upload_file(self, object_name: str, file: UploadFile, file_size: int) -> None:
+    def _upload_file(
+        self, object_name: str, file: UploadFile, file_size: int, media_type: str
+    ) -> None:
+        self._put_object(object_name, file.file, file_size, media_type)
+
+    def _put_object(
+        self,
+        object_name: str,
+        content: BinaryIO,
+        size: int,
+        content_type: str,
+    ) -> None:
         if not self._client.bucket_exists(self._bucket):
             try:
                 self._client.make_bucket(self._bucket)
@@ -126,7 +171,7 @@ class MinioService:
         self._client.put_object(
             self._bucket,
             object_name,
-            file.file,
-            length=file_size,
-            content_type="application/pdf",
+            content,
+            length=size,
+            content_type=content_type,
         )

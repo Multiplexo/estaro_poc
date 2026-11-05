@@ -8,7 +8,9 @@ from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
-INQUIRY_EXTRACTION_SCHEMA_VERSION = 4
+from app.models.domain.language import DetectedLanguage
+
+INQUIRY_EXTRACTION_SCHEMA_VERSION = 6
 
 
 class CitationBBox(BaseModel):
@@ -22,15 +24,17 @@ class CitationBBox(BaseModel):
 
 
 class CitationSource(BaseModel):
-    page_number: int = Field(ge=1)
-    page_width: float = Field(gt=0)
-    page_height: float = Field(gt=0)
-    bbox: CitationBBox
+    text: str | None = None
+    page_number: int | None = Field(default=None, ge=1)
+    page_width: float | None = Field(default=None, gt=0)
+    page_height: float | None = Field(default=None, gt=0)
+    bbox: CitationBBox | None = None
 
 
 class ClassifiedDocument(BaseModel):
-    doctags: str
-    page_images: list[str] = Field(min_length=1)
+    document_id: str
+    content: str
+    page_images: list[str] = Field(default_factory=list)
     sources: dict[str, CitationSource]
 
 
@@ -159,6 +163,10 @@ class FieldsRecheck(ExtractionSchema):
 class ExtractedItem(ExtractionSchema):
     """Eine angefragte Position, getrennt von den übrigen Positionen."""
 
+    quellsprache: DetectedLanguage = Field(
+        default_factory=DetectedLanguage,
+        description="Sprache des Originaltexts dieser Position, vor Übersetzung oder Normalisierung.",
+    )
     bezeichnung: ExtractedField = Field(
         validation_alias=AliasChoices("bezeichnung", "article"),
         default_factory=lambda: missing_extracted_field(),
@@ -290,6 +298,10 @@ class InquiryExtraction(ExtractionSchema):
 
     kundeninformationen: ExtractedCustomer = Field(
         default_factory=lambda: ExtractedCustomer()
+    )
+    quellsprache: DetectedLanguage = Field(
+        default_factory=DetectedLanguage,
+        description="Automatisch erkannte Sprache der ursprünglichen Anfrage aus E-Mail und PDFs.",
     )
     anfragenummer: ExtractedField = Field(
         validation_alias=AliasChoices("anfragenummer", "inquiry_number"),
