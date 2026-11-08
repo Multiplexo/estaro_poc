@@ -49,7 +49,7 @@ export function SidebarNavigation() {
                 <SidebarMenuButton
                   className="h-11 gap-3 text-sm"
                   isActive={pathname === to}
-                  render={<Link to={to} onClick={closeMobile} />}
+                  render={<Link to={to} search={{}} onClick={closeMobile} />}
                 >
                   <Icon aria-hidden="true" className="size-5!" />
                   <span>{t(titleKey)}</span>

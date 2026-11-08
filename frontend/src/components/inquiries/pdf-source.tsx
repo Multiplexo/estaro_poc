@@ -54,7 +54,7 @@ export default function PdfSource({ inquiryId, documentId, pages, highlights, ac
             onClick={() => { setMarking(!marking); setMessage(''); setSelectionError(''); window.getSelection()?.removeAllRanges() }}>
             <Highlighter aria-hidden="true" />{marking ? 'Markieren beenden' : 'Text markieren & Regel erstellen'}
           </Button>
-          <Button size="sm" variant="ghost" render={<Link to="/regeln" />}><ListChecks aria-hidden="true" />Regeln</Button>
+          <Button size="sm" variant="ghost" render={<Link to="/regeln" search={{ returnInquiryId: inquiryId }} />}><ListChecks aria-hidden="true" />Regeln</Button>
         </div>
         <p className="text-xs text-muted-foreground">{marking ? 'Markieren Sie Text auf einer PDF-Seite. Anschließend können Sie eine Regel dazu formulieren.' : 'Blaue Markierungen zeigen Regeln. Zum Bearbeiten anklicken.'}</p>
         {message ? <p role="status" className="text-xs text-muted-foreground">{message}</p> : null}

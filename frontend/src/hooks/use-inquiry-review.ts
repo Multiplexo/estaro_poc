@@ -1,13 +1,13 @@
 import { inquiryDetail } from '@/lib/inquiry-detail'
 import { inquiryTableSections } from '@/lib/inquiry-table-data'
-import { useCallback, useEffect, useEffectEvent, useMemo, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useReducer, useRef } from 'react'
 import { useBlocker } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { sourceSelection, type SourceNavigation } from './use-source-navigation'
 import { ApiError } from '@/lib/api'
 import type { AnalysisResponse, InquiryReview, InquiryResponse } from '@/lib/inquiry-models'
 import { analysisFields, fieldHighlights, type AnalysisField, type Highlight } from '@/lib/inquiry-analysis'
-import { confirmPositions, reviewedField, reviewFieldGroups, reviewSection, type ReviewDraft } from '@/lib/inquiry-review'
+import { reviewedField, reviewFieldGroups, reviewSection, type ReviewDraft } from '@/lib/inquiry-review'
 import { createInquiryEvaluation } from '@/lib/inquiry-evaluation'
 import { inquiryTrafficLight } from '@/lib/inquiry-traffic-light'
 import { createReviewState, reviewHasConflict, reviewIsDirty, reviewReducer } from '@/lib/inquiry-review-state'
@@ -43,9 +43,15 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   const groups = useMemo(() => reviewFieldGroups(editorFields), [editorFields])
   const articleFields = useMemo(() => groups.positions.flatMap((position) => position.fields), [groups.positions])
   const highlights = useMemo(() => fieldHighlights(fields), [fields])
-  const [state, dispatch] = useReducer(reviewReducer, analysis.review, createReviewState)
+  const [state, reduce] = useReducer(reviewReducer, analysis.review, createReviewState)
+  const currentState = useRef(state)
+  useLayoutEffect(() => { currentState.current = state }, [state])
+  const dispatch = useCallback((action: Parameters<typeof reviewReducer>[1]) => {
+    currentState.current = reviewReducer(currentState.current, action)
+    reduce(action)
+  }, [])
   // Reconcile during rendering so every view sees the same revision immediately.
-  if ((analysis.review?.revision ?? 0) > state.latest.revision) dispatch({ type: 'receive', review: analysis.review! })
+  if ((analysis.review?.revision ?? 0) > state.latest.revision) reduce({ type: 'receive', review: analysis.review! })
   const { draft, baseline } = state
   const tableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, { ...analysis, review: draft })) : [], [inquiry, analysis, draft])
   const tableValues = new Map(tableSections.flatMap((section) => section.fields.map((field) => [field.fieldId, field.value ?? ''] as const)))
@@ -73,6 +79,11 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
     return grouped
   }, [allFields, highlights])
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['inquiry-analysis', inquiryId] })
+  const acceptSaved = useCallback((review: InquiryReview, submitted: ReviewDraft) => {
+    dispatch({ type: 'saved', review, submitted })
+    queryClient.setQueriesData<AnalysisResponse>({ queryKey: ['inquiry-analysis', inquiryId] }, (data) =>
+      data && (data.review?.revision ?? 0) <= (review.revision ?? 0) ? { ...data, review } : data)
+  }, [dispatch, queryClient, inquiryId])
   const mutation = useMutation({
     mutationFn: async (submitted: ReviewDraft): Promise<InquiryReview> => {
       if (!analysis.job_id) throw new Error(t('review.noExtraction'))
@@ -82,9 +93,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
     onSuccess: (review, submitted) => {
       void queryClient.invalidateQueries({ queryKey: ['inquiries'] })
       void queryClient.invalidateQueries({ queryKey: ['inquiry', inquiryId] })
-      dispatch({ type: 'saved', review, submitted })
-      queryClient.setQueriesData<AnalysisResponse>({ queryKey: ['inquiry-analysis', inquiryId] }, (data) =>
-        data && (data.review?.revision ?? 0) <= (review.revision ?? 0) ? { ...data, review } : data)
+      acceptSaved(review, submitted)
     },
     onError: (error) => {
       if (error instanceof ApiError && error.status === 409) {
@@ -93,45 +102,68 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
       }
     },
   })
+  const { mutateAsync, isPending } = mutation
+  const writes = useRef<Promise<unknown>>(Promise.resolve())
+  const enqueue = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
+    const next = writes.current.then(operation)
+    writes.current = next.catch(() => undefined)
+    return next
+  }, [])
+  const persist = useCallback(async () => {
+    while (reviewIsDirty(currentState.current)) {
+      if (reviewHasConflict(currentState.current)) throw new Error(t('review.newRevision'))
+      await mutateAsync(currentState.current.draft)
+    }
+    if (reviewHasConflict(currentState.current)) throw new Error(t('review.newRevision'))
+    return currentState.current.draft.revision
+  }, [mutateAsync, t])
+  const save = useCallback(() => enqueue(persist), [enqueue, persist])
+  const runExclusive = useCallback((operation: (revision: number) => Promise<InquiryReview>) => enqueue(async () => {
+    const revision = await persist()
+    const submitted = currentState.current.draft
+    const review = await operation(revision)
+    acceptSaved(review, submitted)
+  }), [enqueue, persist, acceptSaved])
   useBlocker({
-    shouldBlockFn: () => dirty && !window.confirm(t('review.leaveUnsaved')),
+    shouldBlockFn: async () => {
+      try {
+        await save()
+        return false
+      } catch {
+        return !window.confirm(t('review.leaveUnsaved'))
+      }
+    },
     enableBeforeUnload: dirty,
   })
-  const { mutate, isPending } = mutation
-  const savePending = useRef(false)
-  const submit = useCallback((submitted: ReviewDraft) => {
-    if (conflict || isPending || savePending.current) return
-    savePending.current = true
-    mutate(submitted, { onSettled: () => { savePending.current = false } })
-  }, [conflict, isPending, mutate])
-  const save = useCallback(() => {
-    if (dirty) submit(state.draft)
-  }, [dirty, submit, state.draft])
+  useEffect(() => {
+    if (!dirty || conflict || isPending || mutation.isError) return
+    const timer = window.setTimeout(() => { void save().catch(() => undefined) }, 300)
+    return () => window.clearTimeout(timer)
+  }, [dirty, conflict, isPending, mutation.isError, draft, save])
   const assignmentsComplete = summary?.assignmentsComplete ?? false
   const complete = () => {
-    if (positions.length === 0 || !assignmentsComplete || conflict || isPending || savePending.current) return
-    const submitted = confirmPositions(state.draft, editorFields)
+    if (positions.length === 0 || !assignmentsComplete || conflict) return
     dispatch({ type: 'confirmGroup', entries: editorFields })
-    submit(submitted)
+    void save().catch(() => undefined)
   }
   const saveFromKeyboard = useEffectEvent(save)
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault()
-        saveFromKeyboard()
+        void saveFromKeyboard().catch(() => undefined)
       }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
-  const selectField = useCallback((entry: AnalysisField) => dispatch({ type: 'field', entry, highlights }), [highlights])
+  const selectField = useCallback((entry: AnalysisField) => dispatch({ type: 'field', entry, highlights }), [dispatch, highlights])
   const selectHighlight = useCallback((highlight: Highlight) => {
     dispatch({ type: 'highlight', highlight })
     focusField(highlight.fieldId)
-  }, [])
-  const selectDocument = useCallback((id: string) => dispatch({ type: 'document', id }), [])
+  }, [dispatch])
+  const selectDocument = useCallback((id: string) => dispatch({ type: 'document', id }), [dispatch])
   const navigation: SourceNavigation = useMemo(() => ({
     ...sourceSelection(analysis.sources ?? [], highlights, state.selection),
     selectDocument,
@@ -142,7 +174,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
     onFocus: () => selectField(entry),
     onConfirm: () => dispatch({ type: 'confirm', entry }),
     onReset: () => dispatch({ type: 'change', entry, value: entry.field.value ?? '' }),
-  }])), [allFields, selectField])
+  }])), [allFields, selectField, dispatch])
   const resolveConflict = (type: 'reload' | 'reapply') => {
     if (state.latest.revision <= state.baseline.revision) return
     mutation.reset()
@@ -157,7 +189,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   })
   const openCount = openFields.length
   const unconfirmedPositions = summary?.unconfirmedPositions ?? 0
-  const disabled = isPending || conflict
+  const disabled = conflict
   const source = useMemo(() => ({ highlights, navigation }), [highlights, navigation])
   return {
     source,
@@ -200,7 +232,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
       completed: summary?.completed ?? false,
       summary: { openCount, customerAssigned: !!draft.customer_id, assigned: positions.filter((position) => !!position.selectedId).length, total: positions.length },
       canResolveConflict: state.latest.revision > state.baseline.revision && !isPending,
-      save, complete,
+      save, complete, runExclusive,
       reload: () => resolveConflict('reload'), reapply: () => resolveConflict('reapply'), refresh,
     },
   }

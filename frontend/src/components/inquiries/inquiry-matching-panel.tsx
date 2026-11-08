@@ -25,13 +25,13 @@ function targetStatus(target: MatchingTarget): string {
   return target.result?.selected || target.result?.alternatives.length ? 'Vorschlag vorhanden' : 'Offen'
 }
 
-export function InquiryMatchingPanel({ matching, editor, extraction, inquiry, dirty, activeKey, onTargetChange }: {
-  matching: InquiryMatching; editor: ReviewEditor; inquiry?: InquiryResponse; dirty: boolean
+export function InquiryMatchingPanel({ matching, editor, extraction, inquiry, activeKey, onTargetChange }: {
+  matching: InquiryMatching; editor: ReviewEditor; inquiry?: InquiryResponse
   extraction: ExtractionResult
   activeKey: string; onTargetChange: (key: string) => void
 }) {
   const { job, selection, running } = matching
-  const disabled = editor.disabled || dirty || running || selection.isPending || !matching.available
+  const disabled = editor.disabled || selection.isPending || !matching.available
   const data = inquiry?.daten
   const provenance = data?.matching_provenance ?? {}
   const customer = provenance['kundeninformationen.kunde']
@@ -62,7 +62,6 @@ export function InquiryMatchingPanel({ matching, editor, extraction, inquiry, di
       <div role="status" aria-live="polite">{selection.isPending ? 'Zuordnung wird gespeichert …' : selection.isSuccess ? <span className="inline-flex items-center gap-1.5"><Check aria-hidden="true" className="size-3.5" />Zuordnung gespeichert</span> : `${assigned} von ${targets.length} zugeordnet`}</div>
     </div>
     <div className="space-y-3 text-sm leading-6 [&:has(>*)]:mb-5">
-      {dirty ? <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Bitte zuerst die Änderungen an den Anfragedaten speichern, um Zuordnungen zu ändern.</p> : null}
       {!matching.available ? <p role="status">Für diese Anfrage liegt keine zuordenbare Extraktion vor.</p> : null}
       {job.isLoading || running ? <p role="status">{running ? 'Matching-Agenten suchen passende Kunden und Artikel …' : 'Matching-Ergebnisse werden geladen …'}</p> : null}
       {job.isError ? <div role="alert" className="space-y-2"><p className="text-destructive">{job.error.message}</p><Button variant="outline" onClick={() => void job.refetch()}>Erneut laden</Button></div> : null}

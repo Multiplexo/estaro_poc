@@ -5,14 +5,16 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
+from app.config import Settings
+from app.models.jobs.matching import MatchCategory, MatchFeedback
+from app.persistence.jobs.extractions.memory_repository import ReviewedMemoryRepository
 from langgraph.store.base import BaseStore
 from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg import AsyncConnection, Error
 from psycopg.conninfo import make_conninfo
 from psycopg.rows import DictRow, dict_row
-
-from app.config import Settings
-from app.models.jobs.matching import MatchCategory, MatchFeedback
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 logger = structlog.get_logger(__name__)
 
@@ -25,8 +27,11 @@ def matching_input_key(source: str) -> str:
 
 
 class MatchingMemoryRepository:
-    def __init__(self, store: BaseStore) -> None:
+    def __init__(
+        self, store: BaseStore, reviewed: ReviewedMemoryRepository | None = None
+    ) -> None:
         self.store = store
+        self.reviewed = reviewed
 
     async def search(
         self, category: MatchCategory, query: str, limit: int = 10
@@ -38,6 +43,25 @@ class MatchingMemoryRepository:
         if not 1 <= limit <= 100:
             raise ValueError("Feedback search limit must be between 1 and 100")
         ranked: list[tuple[float, MatchFeedback]] = []
+        if self.reviewed is not None:
+            async for record in self.reviewed.records(category):
+                if not isinstance(record, MatchFeedback):
+                    continue
+                text = " ".join(
+                    feedback_values(json.loads(record.source_input))
+                ).casefold()
+                matched = terms & set(re.findall(r"\w+", text))
+                if matched:
+                    ranked.append(
+                        (
+                            len(matched) / len(terms) + (1 if query in text else 0),
+                            record,
+                        )
+                    )
+                ranked.sort(
+                    key=lambda item: (item[0], item[1].created_at), reverse=True
+                )
+                del ranked[limit:]
         offset = 0
         # The store has no embedding index. Search all pages lexically rather
         # than passing a query that an unindexed BaseStore would ignore.
@@ -86,6 +110,7 @@ def feedback_values(value: object) -> list[str]:
 @asynccontextmanager
 async def matching_memory(
     settings: Settings,
+    sessions: async_sessionmaker[AsyncSession] | None = None,
 ) -> AsyncIterator[MatchingMemoryRepository]:
     connection_info = make_conninfo(
         host=settings.POSTGRES_HOST,
@@ -109,7 +134,10 @@ async def matching_memory(
         async with AsyncPostgresStore.from_conn_string(
             connection_info, pool_config={"min_size": 1, "max_size": 5}
         ) as store:
-            yield MatchingMemoryRepository(store)
+            yield MatchingMemoryRepository(
+                store,
+                ReviewedMemoryRepository(sessions) if sessions is not None else None,
+            )
     except (Error, OSError):
         logger.exception("matching_memory_failed")
         raise

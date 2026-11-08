@@ -166,11 +166,6 @@ class MatchingService:
                     raise HTTPException(
                         status_code=409, detail="Extraction review has changed"
                     )
-                job = await self.repository.get(extraction_job_id)
-                if job is not None and job.status in ACTIVE_JOB_STATUSES:
-                    raise HTTPException(
-                        status_code=409, detail="Matching is still running"
-                    )
                 inquiry = await self.inquiries.get_record(source.inquiry_id)
                 if inquiry is None:
                     raise HTTPException(

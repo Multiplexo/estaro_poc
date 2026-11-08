@@ -1,6 +1,6 @@
 from langchain_core.prompts import PromptTemplate
 
-INQUIRY_EXTRACTION_PROMPT_VERSION = "9"
+INQUIRY_EXTRACTION_PROMPT_VERSION = "10"
 
 SYSTEM_PROMPT = """
 Du extrahierst Kundenanfragen für den Edelstahlhandel ESTARO GmbH.

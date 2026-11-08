@@ -2,11 +2,9 @@ import asyncio
 from uuid import UUID
 
 import structlog
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from app.config import Settings
 from app.models.domain.rules import RuleCategory
+from app.persistence.jobs.extractions.memory_repository import ReviewedMemoryRepository
 from app.persistence.jobs.matching.memory_repository import matching_memory
 from app.pipelines.extraction.pipeline import run_pipeline
 from app.pipelines.extraction.prompts import INQUIRY_EXTRACTION_PROMPT_VERSION
@@ -17,6 +15,8 @@ from app.services.jobs.extractions import ExtractionService
 from app.services.jobs.matching import MatchingService
 from app.services.shared.minio import MinioService
 from app.services.shared.openai import OpenAIService
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 logger = structlog.get_logger(__name__)
 
@@ -29,12 +29,14 @@ class ExtractionExecutionService:
         rules: RuleService,
         storage: MinioService,
         settings: Settings,
+        memory: ReviewedMemoryRepository,
     ) -> None:
         self.extractions = extractions
         self.matching = matching
         self.rules = rules
         self.storage = storage
         self.settings = settings
+        self.memory = memory
 
     async def run(self, job_id: UUID) -> None:
         job = await self.extractions.claim(job_id)
@@ -60,6 +62,8 @@ class ExtractionExecutionService:
                     report_progress,
                     self.settings.EXTRACTION_CONFIDENCE_THRESHOLD,
                     prompt,
+                    self.memory,
+                    job.inquiry_id,
                 )
             await self.extractions.complete(
                 job_id, result, self.settings.MODEL, INQUIRY_EXTRACTION_PROMPT_VERSION
@@ -94,7 +98,7 @@ class MatchingExecutionService:
             prompt = await self.rules.prompt(RuleCategory.MATCHING)
             async with (
                 asyncio.timeout(self.settings.MATCHING_TIMEOUT_SECONDS),
-                matching_memory(self.settings) as memory,
+                matching_memory(self.settings, self.sessions) as memory,
                 OpenAIService(self.settings) as openai,
             ):
                 agents = MatchingAgents(self.sessions, openai, memory, prompt)

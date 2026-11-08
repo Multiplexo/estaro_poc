@@ -14,12 +14,12 @@ export function InquiryWorkspace({ inquiryId, analysis, inquiry }: {
   const [view, setView] = useState<'overview' | 'matching' | 'table'>('overview')
   const [matchingTarget, setMatchingTarget] = useState('customer')
   // The review page owns polling through useInquiryAnalysis.
-  const matching = useInquiryMatching(inquiryId, analysis.job_id, review.editor.revision, { poll: false })
+  const matching = useInquiryMatching(inquiryId, analysis.job_id, review.editor.revision, { poll: false, runExclusive: review.persistence.runExclusive })
   const [sourceVisibility, setSourceVisibility] = useState({ overview: true, matching: false, table: false })
   const showPdf = sourceVisibility[view]
   return <div className="flex min-h-0 min-w-0 flex-1 flex-col">
     <div className={`grid min-h-0 min-w-0 flex-1 gap-4 ${showPdf ? 'lg:grid-cols-2' : ''}`}>
-      <ExtractionPanel editor={{ ...review.editor, disabled: review.editor.disabled || matching.selection.isPending }} view={view} onViewChange={setView} showPdf={showPdf} onTogglePdf={() => setSourceVisibility((visibility) => ({ ...visibility, [view]: !visibility[view] }))} matchingPanel={<InquiryMatchingPanel matching={matching} editor={review.editor} extraction={analysis.extraction} inquiry={inquiry} dirty={review.persistence.dirty} activeKey={matchingTarget} onTargetChange={setMatchingTarget} />} />
+      <ExtractionPanel editor={review.editor} view={view} onViewChange={setView} showPdf={showPdf} onTogglePdf={() => setSourceVisibility((visibility) => ({ ...visibility, [view]: !visibility[view] }))} matchingPanel={<InquiryMatchingPanel matching={matching} editor={review.editor} extraction={analysis.extraction} inquiry={inquiry} activeKey={matchingTarget} onTargetChange={setMatchingTarget} />} />
       {showPdf ? <SourcePanel inquiryId={inquiryId} sources={analysis.sources ?? []} highlights={review.source.highlights} navigation={review.source.navigation} /> : null}
     </div>
     <ReviewSaveBar review={{ ...review.persistence, saving: review.persistence.saving || matching.selection.isPending }} />

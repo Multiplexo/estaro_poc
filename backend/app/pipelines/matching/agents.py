@@ -1,11 +1,5 @@
 from collections.abc import Mapping
 
-from langchain.agents import create_agent
-from langchain.agents.structured_output import ProviderStrategy
-from langchain_core.utils.function_calling import convert_to_json_schema
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from app.models.domain.articles import Article
 from app.models.domain.customers import Customer
 from app.models.domain.inquiry_data import InquiryData
@@ -16,10 +10,16 @@ from app.models.jobs.matching import (
     matching_input,
 )
 from app.persistence.jobs.matching.memory_repository import MatchingMemoryRepository
+from app.pipelines.guardrails import GUARDRAILS_SYSTEM_PROMPT, create_guardrails
 from app.pipelines.matching.prompts import ARTICLE_PROMPT, CUSTOMER_PROMPT
 from app.pipelines.matching.tools.customer_tools import create_customer_tools
 from app.pipelines.matching.tools.position_tools import create_position_tools
 from app.services.shared.openai import OpenAIService
+from langchain.agents import create_agent
+from langchain.agents.structured_output import ProviderStrategy
+from langchain_core.utils.function_calling import convert_to_json_schema
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class MatchingAgents:
@@ -40,7 +40,10 @@ class MatchingAgents:
         agent = create_agent(
             self.openai.get_chat_model(),
             tools=create_customer_tools(self.sessions, self.memory, candidates),
-            system_prompt=CUSTOMER_PROMPT + self.rules_prompt,
+            system_prompt=CUSTOMER_PROMPT
+            + self.rules_prompt
+            + GUARDRAILS_SYSTEM_PROMPT,
+            middleware=create_guardrails(self.openai.get_chat_model()),
             response_format=ProviderStrategy(
                 convert_to_json_schema(MatchDecision, strict=True), strict=True
             ),
@@ -56,17 +59,19 @@ class MatchingAgents:
             {"recursion_limit": 30},
         )
         decision = MatchDecision.model_validate(response["structured_response"])
-        return match_result(
+        result = match_result(
             decision,
             {key: customer_candidate(value) for key, value in candidates.items()},
         )
+        return result
 
     async def article(self, data: InquiryData, position_index: int) -> MatchResult:
         candidates: dict[str, Article] = {}
         agent = create_agent(
             self.openai.get_chat_model(),
             tools=create_position_tools(self.sessions, self.memory, candidates),
-            system_prompt=ARTICLE_PROMPT + self.rules_prompt,
+            system_prompt=ARTICLE_PROMPT + self.rules_prompt + GUARDRAILS_SYSTEM_PROMPT,
+            middleware=create_guardrails(self.openai.get_chat_model()),
             response_format=ProviderStrategy(
                 convert_to_json_schema(MatchDecision, strict=True), strict=True
             ),
@@ -75,21 +80,15 @@ class MatchingAgents:
         )
         source = matching_input(data, "article", position_index)
         response = await agent.ainvoke(
-            {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": source,
-                    }
-                ]
-            },
+            {"messages": [{"role": "user", "content": source}]},
             {"recursion_limit": 30},
         )
         decision = MatchDecision.model_validate(response["structured_response"])
-        return match_result(
+        result = match_result(
             decision,
             {key: article_candidate(value) for key, value in candidates.items()},
         )
+        return result
 
 
 def match_result(

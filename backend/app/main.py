@@ -4,14 +4,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from psycopg import Error as PsycopgError
-from sqlalchemy.exc import SQLAlchemyError
-
 from app.config import get_settings
 from app.models.api.health import RootResponse
+from app.persistence.jobs.matching.memory_repository import matching_memory
 from app.routes.articles import router as articles_router
 from app.routes.customers import router as customers_router
 from app.routes.extractions import router as extractions_router
@@ -20,6 +15,11 @@ from app.routes.matching import router as matching_router
 from app.routes.outlook import router as outlook_router
 from app.routes.rules import router as rules_router
 from app.services.shared.database import database_service
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from psycopg import Error as PsycopgError
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = structlog.get_logger(__name__)
 
@@ -28,7 +28,11 @@ logger = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Release pooled database connections when the application stops."""
     try:
-        yield
+        async with matching_memory(
+            get_settings(), database_service.session_factory
+        ) as memory:
+            app.state.matching_memory = memory
+            yield
     finally:
         try:
             await database_service.engine.dispose()
@@ -40,12 +44,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Estaro API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        get_settings().MS_FRONTEND_URL,
-    ],
+    allow_origins=list(
+        dict.fromkeys([get_settings().MS_FRONTEND_URL, *get_settings().CORS_ORIGINS])
+    ),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Accept", "Authorization", "Content-Type"],
 )
 
 

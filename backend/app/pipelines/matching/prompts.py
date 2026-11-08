@@ -1,4 +1,4 @@
-MATCHING_PROMPT_VERSION = "8"
+MATCHING_PROMPT_VERSION = "9"
 
 BASE_PROMPT = """Ordne extrahierte Anfragedaten den vorhandenen ERP-Stammdaten zu.
 Verwende die bereitgestellten Werkzeuge für Feedbacksuche, Stammdatensuche und

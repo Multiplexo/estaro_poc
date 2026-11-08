@@ -206,9 +206,12 @@ class OutlookClient:
     async def request[Result](
         self, operation: Callable[[], Awaitable[Result]]
     ) -> Result:
+        async def execute() -> Result:
+            return await operation()
+
         return await AsyncRetrying(
             retry=retry_if_exception(retry_outlook_request),
             wait=outlook_retry_wait,
             stop=stop_after_attempt(4),
             reraise=True,
-        )(operation)
+        )(execute)

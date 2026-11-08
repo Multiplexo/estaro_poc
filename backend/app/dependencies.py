@@ -1,7 +1,6 @@
-from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import SettingsDep
@@ -10,7 +9,6 @@ from app.persistence.domain.customers.customer_repository import CustomerReposit
 from app.persistence.domain.inquiries.inquiry_repository import InquiryRepository
 from app.persistence.jobs.matching.memory_repository import (
     MatchingMemoryRepository,
-    matching_memory,
 )
 from app.services.domain.documents import InquiryDocumentService
 from app.services.domain.inquiries import InquiryService
@@ -52,10 +50,9 @@ async def get_feedback_service(session: SessionDep) -> MatchingFeedbackService:
 
 
 async def get_matching_memory(
-    settings: SettingsDep,
-) -> AsyncIterator[MatchingMemoryRepository]:
-    async with matching_memory(settings) as memory:
-        yield memory
+    request: Request,
+) -> MatchingMemoryRepository:
+    return request.app.state.matching_memory
 
 
 async def get_extraction_service(session: SessionDep) -> ExtractionService:

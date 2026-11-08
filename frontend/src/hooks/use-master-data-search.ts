@@ -29,7 +29,10 @@ export function useMasterDataSearch(kind: MasterDataKind, initialSearch: string,
     const timer = window.setTimeout(() => setTerm(search.trim()), 250)
     return () => window.clearTimeout(timer)
   }, [search])
-  const selectResults = useCallback((items: MasterDataCandidate[]) => filterMasterData(items, term), [term])
+  const selectResults = useCallback((items: MasterDataCandidate[]) => {
+    const matches = filterMasterData(items, term)
+    return kind === 'articles' ? matches.filter((item) => item.is_active) : matches
+  }, [kind, term])
   const results = useQuery({
     queryKey: [kind],
     queryFn: ({ signal }) => loadAll<MasterDataCandidate>((params) => kind === 'customers'

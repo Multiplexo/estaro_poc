@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     MODEL: str = "gtp-6.1-luna"
 
+    CORS_ORIGINS: list[str] = Field(default_factory=list)
+
     MS_CLIENT_ID: str = ""
     MS_CLIENT_SECRET: str = ""
     MS_AUTHORITY: str = "https://login.microsoftonline.com/consumers"
@@ -46,6 +48,13 @@ class Settings(BaseSettings):
     MS_FRONTEND_URL: str = "http://localhost:5173"
     MS_FETCH_ENABLED: bool = False
     MS_FETCH_INTERVAL_SECONDS: int = Field(default=300, ge=1)
+
+    @field_validator("CORS_ORIGINS")
+    @classmethod
+    def validate_cors_origins(cls, value: list[str]) -> list[str]:
+        return list(
+            dict.fromkeys(cls.validate_frontend_url(origin) for origin in value)
+        )
 
     @field_validator("MS_FRONTEND_URL")
     @classmethod
@@ -60,7 +69,7 @@ class Settings(BaseSettings):
             or parsed.query
             or parsed.fragment
         ):
-            raise ValueError("MS_FRONTEND_URL must be an HTTP or HTTPS origin")
+            raise ValueError("Frontend URLs must be explicit HTTP or HTTPS origins")
         return value.rstrip("/")
 
     model_config = SettingsConfigDict(

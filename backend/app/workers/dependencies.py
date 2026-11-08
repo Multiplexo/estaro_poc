@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.persistence.domain.inquiries.inquiry_repository import InquiryRepository
+from app.persistence.jobs.extractions.memory_repository import ReviewedMemoryRepository
 from app.services.domain.inquiries import InquiryService
 from app.services.factory import (
     create_extraction_service,
@@ -49,6 +50,7 @@ async def extraction_execution() -> AsyncIterator[ExtractionExecutionService]:
             create_rule_service(session),
             MinioService(settings),
             settings,
+            ReviewedMemoryRepository(database.session_factory),
         )
 
 

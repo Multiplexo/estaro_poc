@@ -26,7 +26,7 @@ from app.models.domain.outlook import (
     OutlookMessage,
 )
 from app.persistence.domain.outlook.outlook_repository import OutlookRepository
-from app.persistence.domain.outlook.schema.connection import OutlookConnection
+from app.persistence.domain.outlook.schema.mailbox import OutlookMailbox
 from app.services.jobs.uploads import ExtractionUploadService
 from app.services.shared.minio import MinioService
 from app.services.shared.outlook import OutlookClient, serialize_graph_model
@@ -78,7 +78,7 @@ class OutlookFetchService:
         return result
 
     async def _download_page(
-        self, connection: OutlookConnection
+        self, connection: OutlookMailbox
     ) -> OutlookFetchPageResult:
         builder = self.outlook.graph.me.mail_folders.by_mail_folder_id(
             "inbox"

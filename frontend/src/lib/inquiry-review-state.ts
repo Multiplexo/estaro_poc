@@ -88,6 +88,13 @@ export function reviewReducer(state: ReviewState, action: ReviewAction): ReviewS
       if (saved.revision < state.baseline.revision) return state
       const latest = saved.revision >= state.latest.revision ? saved : state.latest
       const editedDuringSave = reviewIsDirty({ ...state, baseline: action.submitted })
+      const fields = { ...state.draft.fields }
+      for (const id of new Set([...Object.keys(fields), ...Object.keys(saved.fields)])) {
+        if (equalReviewField(fields[id], action.submitted.fields[id])) {
+          if (saved.fields[id]) fields[id] = saved.fields[id]
+          else delete fields[id]
+        }
+      }
       const position_confirmations = { ...state.draft.position_confirmations }
       for (const key of Object.keys(position_confirmations)) {
         if (equalConfirmation(position_confirmations[key], action.submitted.position_confirmations[key])) {
@@ -96,7 +103,7 @@ export function reviewReducer(state: ReviewState, action: ReviewAction): ReviewS
         }
       }
       return editedDuringSave
-        ? { ...state, baseline: saved, draft: { ...state.draft, position_confirmations, revision: saved.revision }, latest, stale: false,
+        ? { ...state, baseline: saved, draft: { ...state.draft, fields, position_confirmations, revision: saved.revision }, latest, stale: false,
           customerTouched: state.draft.customer_id !== action.submitted.customer_id || customerIdentityKinds.some((id) => !equalReviewField(state.draft.fields[id], action.submitted.fields[id])),
           articlesTouched: state.articlesTouched.filter((id) => state.draft.article_ids[id] !== action.submitted.article_ids[id] ||
             positionFieldsChanged(action.submitted, state.draft, id, false)) }

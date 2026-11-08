@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from uuid import UUID
 
 from app.workers.celery_app import celery_app
@@ -12,4 +13,5 @@ async def run_matching(job_id: UUID) -> None:
 
 @celery_app.task(name="matching.run", ignore_result=True)
 def matching_task(job_id: str) -> None:
-    asyncio.run(run_matching(UUID(job_id)))
+    loop_factory = asyncio.SelectorEventLoop if sys.platform == "win32" else None
+    asyncio.run(run_matching(UUID(job_id)), loop_factory=loop_factory)

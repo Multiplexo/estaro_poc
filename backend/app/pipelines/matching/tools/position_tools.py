@@ -24,20 +24,22 @@ def create_position_tools(
         sales_unit_code, is_active, is_saleable und stock_quantity_min.
         Matchcode und Beschreibungen werden als Teiltext gesucht; andere Textfilter
         müssen exakt übereinstimmen. Boolesche Filter benötigen true oder false.
-        Ohne Filter werden keine Artikel aufgrund fachlicher Regeln ausgeschlossen.
+        Es werden ausschließlich aktive Artikel zurückgegeben, unabhängig von filters.
         Werkstoffe und Maße können als Suchtext oder Beschreibung gefiltert werden.
         """
         async with sessions() as session:
-            records = await ArticleRepository(session).search(query, filters=filters)
+            records = await ArticleRepository(session).search(
+                query, filters=filters.model_copy(update={"is_active": True})
+            )
         candidates.update({str(record.id): record for record in records})
         return TypeAdapter(list[Article]).dump_json(records).decode()
 
     @tool
     async def get_article_details(article_id: PositiveInt) -> str:
-        """Lies die vollständigen Artikelstammdaten zu einer exakten Artikel-Datenbank-ID."""
+        """Lies die vollständigen Stammdaten eines aktiven Artikels anhand seiner Datenbank-ID."""
         async with sessions() as session:
             record = await ArticleRepository(session).get_article(article_id)
-        if record is None:
+        if record is None or not record.is_active:
             return "null"
         candidates[str(record.id)] = record
         return record.model_dump_json()
