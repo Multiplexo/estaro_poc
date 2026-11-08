@@ -2,6 +2,9 @@ import asyncio
 from uuid import UUID
 
 import structlog
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.config import Settings
 from app.models.domain.rules import RuleCategory
 from app.persistence.jobs.extractions.memory_repository import ReviewedMemoryRepository
@@ -15,8 +18,6 @@ from app.services.jobs.extractions import ExtractionService
 from app.services.jobs.matching import MatchingService
 from app.services.shared.minio import MinioService
 from app.services.shared.openai import OpenAIService
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 logger = structlog.get_logger(__name__)
 
@@ -101,7 +102,13 @@ class MatchingExecutionService:
                 matching_memory(self.settings, self.sessions) as memory,
                 OpenAIService(self.settings) as openai,
             ):
-                agents = MatchingAgents(self.sessions, openai, memory, prompt)
+                agents = MatchingAgents(
+                    self.sessions,
+                    openai,
+                    memory,
+                    prompt,
+                    recursion_limit=self.settings.RECURSION_LIMIT,
+                )
                 result = await run_matching_pipeline(
                     job, agents, self.settings.MATCHING_CONCURRENCY
                 )

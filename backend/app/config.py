@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str = ""
     MODEL: str = "gtp-6.1-luna"
+    RECURSION_LIMIT: int = Field(default=30, ge=1)
 
     CORS_ORIGINS: list[str] = Field(default_factory=list)
 

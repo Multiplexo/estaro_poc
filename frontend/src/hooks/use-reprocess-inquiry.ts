@@ -20,8 +20,7 @@ export function useReprocessInquiry(inquiryId: string, { poll = true }: { poll?:
   const checkingMatching = job.data?.status === 'succeeded' && matching.isPending
   const matchingError = matching.error instanceof ApiError && matching.error.status === 404 ? null : matching.error
   const error = restart.error?.message ?? job.error?.message ?? matchingError?.message
-  const failedStep = job.data?.status === 'failed' ? 'Die Extraktion ist fehlgeschlagen. Du kannst die Verarbeitung erneut starten.'
-    : matching.data?.status === 'failed' ? 'Das Matching ist fehlgeschlagen. Du kannst die Verarbeitung erneut starten.' : undefined
+  const failedStep = job.data?.status === 'failed' ? 'Die Extraktion ist fehlgeschlagen. Du kannst die Verarbeitung erneut starten.' : undefined
 
   return {
     start: () => restart.mutate(),

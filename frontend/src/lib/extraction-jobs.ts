@@ -1,7 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { ExtractionJobStatus } from './generated/Api'
+import type { MatchingProcessingJob } from './inquiry-processing'
 
-export type TrackedExtraction = { job: ExtractionJobStatus; filename: string }
+export type TrackedExtraction = { job: ExtractionJobStatus; filename: string; matching?: Pick<MatchingProcessingJob, 'status' | 'error'> | null }
 export const extractionJobsKey = ['extraction-jobs'] as const
 const storageKey = 'estaro.extraction-jobs.v1'
 

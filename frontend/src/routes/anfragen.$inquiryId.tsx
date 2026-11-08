@@ -27,9 +27,9 @@ function InquiryOverviewPage() {
           {detail?.customerName && detail.title !== detail.customerName ? <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{detail.title}</p> : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {detail ? <Button className="min-h-11 px-4" render={<Link to="/anfragen/$inquiryId/pruefung" params={{ inquiryId }} />}>
+          <Button className="min-h-11 px-4" render={<Link to="/anfragen/$inquiryId/pruefung" params={{ inquiryId }} />}>
             Zur Prüfung<ArrowRightIcon aria-hidden="true" />
-          </Button> : null}
+          </Button>
           {inquiry.data ? <InquiryDetailActions inquiry={inquiry.data} /> : null}
         </div>
       </header>

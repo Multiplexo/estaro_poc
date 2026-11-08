@@ -19,7 +19,7 @@ export function InquiryQueue({ deletion }: { deletion: DeleteInquiryController }
     <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-0">
       <PopoverHeader className="border-b px-4 py-3">
         <PopoverTitle>Verarbeitungsqueue</PopoverTitle>
-        <PopoverDescription>In diesem Browser gestartete Extraktionen.</PopoverDescription>
+        <PopoverDescription>In diesem Browser gestartete Extraktionen und Matchings.</PopoverDescription>
       </PopoverHeader>
       <div className="max-h-[min(32rem,65svh)] overflow-y-auto px-4">
         {queue.isPending ? <p role="status" className="py-5 text-muted-foreground">Queue wird geladen …</p> : null}

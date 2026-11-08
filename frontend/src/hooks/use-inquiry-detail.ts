@@ -6,7 +6,7 @@ import { inquiryDetail } from '@/lib/inquiry-detail'
 
 export function useInquiryDetail(inquiryId: string) {
   const api = useApi()
-  const { inquiry, analysis } = useInquiryAnalysis(inquiryId)
+  const { inquiry, analysis, reviewReady } = useInquiryAnalysis(inquiryId)
   const detail = useMemo(() => inquiry.data && analysis.data ? inquiryDetail(inquiry.data, analysis.data) : null, [inquiry.data, analysis.data])
   const customerId = detail?.customerId
   const customer = useQuery({
@@ -15,5 +15,5 @@ export function useInquiryDetail(inquiryId: string) {
     enabled: !!customerId,
     staleTime: 60_000,
   })
-  return { inquiry, analysis, detail, customer }
+  return { inquiry, analysis, detail, customer, reviewReady }
 }

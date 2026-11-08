@@ -26,6 +26,18 @@ def create_customer_tools(
         return TypeAdapter(list[Customer]).dump_json(records).decode()
 
     @tool
+    async def get_customer_by_number(customer_number: str) -> str:
+        """Lies Kundenstammdaten über die exakte Kundennummer, etwa D30269 für Divers."""
+        async with sessions() as session:
+            record = await CustomerRepository(session).get_customer_by_number(
+                customer_number
+            )
+        if record is None:
+            return "null"
+        candidates[str(record.id)] = record
+        return record.model_dump_json()
+
+    @tool
     async def get_customer_details(customer_id: UUID) -> str:
         """Lies die vollständigen Kundenstammdaten zu einer exakten Kunden-UUID."""
         async with sessions() as session:
@@ -41,4 +53,9 @@ def create_customer_tools(
         records = await memory.search("customer", query)
         return TypeAdapter(list[MatchFeedback]).dump_json(records).decode()
 
-    return [search_customers, get_customer_details, get_customer_feedback]
+    return [
+        search_customers,
+        get_customer_by_number,
+        get_customer_details,
+        get_customer_feedback,
+    ]

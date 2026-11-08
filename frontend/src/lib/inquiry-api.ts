@@ -3,6 +3,7 @@ import type { ExtractedField, ExtractionJobStatus, ExtractionReview, Inquiry, In
 import type { AnalysisResponse, ExtractionResult, InquiryOverview, InquiryResponse, InquiryReview, JobSummary, PageInquiryOverview, VerifiedField } from './inquiry-models'
 import { createInquiryEvaluation } from './inquiry-evaluation'
 import { reviewDraft } from './inquiry-review'
+import type { MatchingProcessingJob } from './inquiry-processing'
 
 export function inquiryReview(review?: ExtractionReview): InquiryReview {
   return {
@@ -16,6 +17,20 @@ export function jobSummary(job: ExtractionJobStatus): JobSummary {
     id: job.id, status: job.status === 'succeeded' ? 'completed' : job.status,
     step: null, current_step: job.current_step, completed_steps: job.completed_steps,
     total_steps: job.total_steps, attempts: 0, last_error: job.error,
+  }
+}
+
+export function processingJobSummary(job: ExtractionJobStatus, matching?: Pick<MatchingProcessingJob, 'status' | 'error'> | null): JobSummary {
+  const summary = jobSummary(job)
+  const extractionSteps = job.total_steps ?? 4
+  const total = extractionSteps + 1
+  if (job.status !== 'succeeded') return { ...summary, total_steps: total }
+  return {
+    ...summary,
+    status: matching?.status === 'succeeded' ? 'completed' : matching?.status === 'failed' ? 'failed' : 'running',
+    step: 'matching', current_step: null,
+    completed_steps: extractionSteps + (matching?.status === 'succeeded' ? 1 : 0), total_steps: total,
+    last_error: matching?.error ?? null,
   }
 }
 

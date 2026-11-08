@@ -27,6 +27,7 @@ from app.models.jobs.extraction import (
     CUSTOMER_FIELD_NAMES,
     INQUIRY_FIELD_NAMES,
     POSITION_FIELD_NAMES,
+    ExtractionStatus,
 )
 from app.persistence.domain.inquiries.schema.inquiry import Inquiry as InquirySchema
 from app.persistence.domain.inquiries.schema.inquiry import (
@@ -37,6 +38,7 @@ from app.persistence.domain.inquiries.schema.inquiry_extraction import (
 )
 from app.persistence.domain.inquiries.schema.inquiry_import import InquiryImport
 from app.persistence.jobs.extractions.schema.extraction_job import ExtractionJob
+from app.persistence.jobs.matching.schema.matching_job import MatchingJob
 
 logger = structlog.get_logger(__name__)
 
@@ -72,6 +74,16 @@ class InquiryRepository:
         self.session = session
 
     async def list_overviews(self, query: InquiryOverviewQuery) -> InquiryOverviewPage:
+        latest_job_id = (
+            select(ExtractionJob.id)
+            .where(ExtractionJob.inquiry_id == InquirySchema.id)
+            .order_by(
+                col(ExtractionJob.created_at).desc(), col(ExtractionJob.id).desc()
+            )
+            .limit(1)
+            .correlate(InquirySchema)
+            .scalar_subquery()
+        )
         latest_id = (
             select(ExtractionSchema.id)
             .where(ExtractionSchema.inquiry_id == InquirySchema.id)
@@ -132,8 +144,19 @@ class InquiryRepository:
             _reviewed_value("reference_number"),
             "",
         )
-        statement = select(InquirySchema, ExtractionSchema).join(
-            ExtractionSchema, col(ExtractionSchema.id) == latest_id
+        statement = (
+            select(InquirySchema, ExtractionSchema)
+            .join(ExtractionSchema, col(ExtractionSchema.id) == latest_id)
+            .join(ExtractionJob, col(ExtractionJob.id) == ExtractionSchema.job_id)
+            .join(MatchingJob, MatchingJob.extraction_job_id == ExtractionJob.id)
+            .where(
+                col(ExtractionJob.id) == latest_job_id,
+                ExtractionJob.status == ExtractionStatus.SUCCEEDED,
+                col(MatchingJob.status).in_(
+                    [ExtractionStatus.SUCCEEDED, ExtractionStatus.FAILED]
+                ),
+                col(InquirySchema.deletion_requested_at).is_(None),
+            )
         )
         if query.status != "all":
             statement = statement.where(review_status == query.status)

@@ -35,6 +35,16 @@ export interface MatchSelection {
   position_index?: number
 }
 
+export function matchingFinished(status?: MatchingProcessingJob['status']): boolean {
+  return status === 'succeeded' || status === 'failed'
+}
+
+export async function retryInquiryMatching(api: ApiClient, jobId: string) {
+  return (await api.request<MatchingProcessingJob>({
+    path: `/extractions/${jobId}/matching`, method: 'POST', format: 'json',
+  })).data
+}
+
 export async function getInquiryExtractionJob(api: ApiClient, inquiryId: string, params: RequestParams = {}) {
   return (await api.request<ExtractionJobStatus | null>({
     path: `/inquiries/${inquiryId}/extraction-job`, method: 'GET', format: 'json', ...params,

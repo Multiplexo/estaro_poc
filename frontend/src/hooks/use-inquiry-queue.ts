@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useExtractionJobs } from './use-extraction-jobs'
 import { PAGE_SIZE } from './use-inquiries'
-import { jobSummary } from '@/lib/inquiry-api'
+import { processingJobSummary } from '@/lib/inquiry-api'
 import type { Inquiry } from '@/lib/api'
+import { matchingFinished } from '@/lib/inquiry-processing'
 
 export function useInquiryQueue() {
   const query = useExtractionJobs()
   const [page, setPage] = useState(0)
-  const jobs = query.data.filter(({ job }) => job.status !== 'succeeded')
-  const items: Inquiry[] = jobs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map(({ job, filename }) => ({
-    id: job.inquiry_id ?? job.id, created_at: job.created_at, processing_job: jobSummary(job),
+  const jobs = query.data.filter(({ job, matching }) => job.status !== 'succeeded' || !matchingFinished(matching?.status))
+  const items: Inquiry[] = jobs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map(({ job, filename, matching }) => ({
+    id: job.inquiry_id ?? job.id, created_at: job.created_at, processing_job: processingJobSummary(job, matching),
     documents: job.document_id ? [{ id: job.document_id, inquiry_id: job.inquiry_id ?? '', filename, file_type: filename.toLowerCase().endsWith('.msg') ? 'msg' : filename.toLowerCase().endsWith('.eml') ? 'eml' : 'pdf' }] : [],
   }))
   const last = Math.max(0, Math.ceil(jobs.length / PAGE_SIZE) - 1)
