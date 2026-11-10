@@ -70,7 +70,7 @@ async def test_email_extraction_rechecks_fields_and_reports_progress(
     source: InquiryDocument,
     storage: AsyncMock,
     extraction: InquiryExtraction,
-    openai_service: Mock,
+    ai_service: Mock,
     model_responses: dict[str, dict[str, Any]],
     model_requests: list[dict[str, Any]],
 ) -> None:
@@ -92,7 +92,7 @@ async def test_email_extraction_rechecks_fields_and_reports_progress(
     result = await run_pipeline(
         [source],
         storage,
-        openai_service,
+        ai_service,
         progress,
         confidence_threshold=0.5,
         rules_prompt="Preserve source units.",
@@ -133,7 +133,7 @@ async def test_extraction_rejects_ungrounded_citations(
     source: InquiryDocument,
     storage: AsyncMock,
     extraction: InquiryExtraction,
-    openai_service: Mock,
+    ai_service: Mock,
     model_responses: dict[str, dict[str, Any]],
     invalid_citation: str,
 ) -> None:
@@ -146,7 +146,7 @@ async def test_extraction_rejects_ungrounded_citations(
     progress = AsyncMock()
 
     with pytest.raises(ValueError, match="known document section|verbatim"):
-        await run_pipeline([source], storage, openai_service, progress, 0.5)
+        await run_pipeline([source], storage, ai_service, progress, 0.5)
 
     assert call("recheck_fields", 4) not in progress.await_args_list
 
@@ -154,19 +154,19 @@ async def test_extraction_rejects_ungrounded_citations(
 async def test_invalid_email_stops_before_ai_calls(
     source: InquiryDocument,
     storage: AsyncMock,
-    openai_service: Mock,
+    ai_service: Mock,
 ) -> None:
     storage.get_inquiry_file.return_value = b"not an email"
     with pytest.raises(ValueError, match="EML email could not be read"):
-        await run_pipeline([source], storage, openai_service, AsyncMock(), 0.5)
-    openai_service.get_chat_model.assert_not_called()
+        await run_pipeline([source], storage, ai_service, AsyncMock(), 0.5)
+    ai_service.get_chat_model.assert_not_called()
 
 
 async def test_incomplete_recheck_does_not_return_partial_extraction(
     source: InquiryDocument,
     storage: AsyncMock,
     extraction: InquiryExtraction,
-    openai_service: Mock,
+    ai_service: Mock,
     model_responses: dict[str, dict[str, Any]],
 ) -> None:
     model_responses["InquiryExtraction"] = extraction.model_dump(mode="json")
@@ -174,6 +174,6 @@ async def test_incomplete_recheck_does_not_return_partial_extraction(
     progress = AsyncMock()
 
     with pytest.raises(ValueError, match="each requested field exactly once"):
-        await run_pipeline([source], storage, openai_service, progress, 0.5)
+        await run_pipeline([source], storage, ai_service, progress, 0.5)
 
     assert progress.await_args_list[-1] == call("recheck_fields", 3)

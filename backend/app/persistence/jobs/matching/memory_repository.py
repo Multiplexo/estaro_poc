@@ -5,9 +5,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
-from app.config import Settings
-from app.models.jobs.matching import MatchCategory, MatchFeedback
-from app.persistence.jobs.extractions.memory_repository import ReviewedMemoryRepository
 from langgraph.store.base import BaseStore
 from langgraph.store.postgres.aio import AsyncPostgresStore
 from psycopg import AsyncConnection, Error
@@ -15,6 +12,10 @@ from psycopg.conninfo import make_conninfo
 from psycopg.rows import DictRow, dict_row
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.config import Settings
+from app.models.jobs.matching import MatchCategory, MatchFeedback
+from app.persistence.jobs.extractions.memory_repository import ReviewedMemoryRepository
 
 logger = structlog.get_logger(__name__)
 

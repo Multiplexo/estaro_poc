@@ -4,6 +4,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from psycopg import Error as PsycopgError
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.config import get_settings
 from app.models.api.health import RootResponse
 from app.persistence.jobs.matching.memory_repository import matching_memory
@@ -15,11 +21,6 @@ from app.routes.matching import router as matching_router
 from app.routes.outlook import router as outlook_router
 from app.routes.rules import router as rules_router
 from app.services.shared.database import database_service
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from psycopg import Error as PsycopgError
-from sqlalchemy.exc import SQLAlchemyError
 
 logger = structlog.get_logger(__name__)
 

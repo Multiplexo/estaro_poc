@@ -7,7 +7,7 @@ import pytest
 from httpx import AsyncClient, MockTransport, Request, Response
 from langchain_openai import ChatOpenAI
 
-from app.services.shared.openai import OpenAIService
+from app.services.shared.ai import AIService
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def model_requests() -> list[dict[str, Any]]:
 
 
 @pytest.fixture
-async def openai_service(
+async def ai_service(
     model_responses: dict[str, dict[str, Any]],
     model_requests: list[dict[str, Any]],
 ) -> AsyncIterator[Mock]:
@@ -85,6 +85,6 @@ async def openai_service(
             use_responses_api=False,
             max_retries=0,
         )
-        service = Mock(spec=OpenAIService)
+        service = Mock(spec=AIService)
         service.get_chat_model.return_value = model
         yield service

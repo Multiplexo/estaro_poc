@@ -5,6 +5,11 @@ from collections.abc import AsyncIterator
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 import structlog
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel import col, select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from app.models.domain.inquiries import InquiryExtractionSnapshot
 from app.models.domain.inquiry_data import InquiryData
 from app.models.domain.inquiry_mapping import map_extraction_to_inquiry
@@ -13,10 +18,6 @@ from app.models.jobs.extraction import extraction_fields
 from app.models.jobs.matching import MatchCategory, MatchFeedback, matching_input
 from app.persistence.domain.inquiries.schema.inquiry import Inquiry
 from app.persistence.domain.inquiries.schema.inquiry_extraction import InquiryExtraction
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlmodel import col, select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 logger = structlog.get_logger(__name__)
 

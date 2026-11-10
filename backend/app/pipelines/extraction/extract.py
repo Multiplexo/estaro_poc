@@ -22,7 +22,7 @@ from app.pipelines.extraction.prompts import (
     SYSTEM_PROMPT,
 )
 from app.pipelines.guardrails import GUARDRAILS_SYSTEM_PROMPT, create_guardrails
-from app.services.shared.openai import OpenAIService
+from app.services.shared.ai import AIService
 
 logger = structlog.get_logger(__name__)
 
@@ -62,14 +62,14 @@ async def _extract_structured[Result: ExtractionSchema](
     documents: list[ClassifiedDocument],
     prompt: str,
     schema: type[Result],
-    openai: OpenAIService,
+    ai_service: AIService,
     rules_prompt: str = "",
     memory_context: str = "",
 ) -> Result:
     agent = create_agent(
-        model=openai.get_chat_model(),
+        model=ai_service.get_chat_model(),
         system_prompt=SYSTEM_PROMPT + rules_prompt + GUARDRAILS_SYSTEM_PROMPT,
-        middleware=create_guardrails(openai.get_chat_model()),
+        middleware=create_guardrails(ai_service.get_chat_model()),
         response_format=ProviderStrategy(
             convert_to_json_schema(schema, strict=True), strict=True
         ),
@@ -123,7 +123,7 @@ async def _extract_structured[Result: ExtractionSchema](
 
 async def extract_inquiry(
     documents: list[ClassifiedDocument],
-    openai: OpenAIService,
+    ai_service: AIService,
     rules_prompt: str = "",
     memory_context: str = "",
 ) -> InquiryExtraction:
@@ -132,7 +132,12 @@ async def extract_inquiry(
             source_documents=_source_content(documents)
         )
         extraction = await _extract_structured(
-            documents, prompt, InquiryExtraction, openai, rules_prompt, memory_context
+            documents,
+            prompt,
+            InquiryExtraction,
+            ai_service,
+            rules_prompt,
+            memory_context,
         )
         extraction = _ground_citations(extraction, documents)
     except Exception:
@@ -154,7 +159,7 @@ async def extract_inquiry(
 async def recheck_fields(
     documents: list[ClassifiedDocument],
     extraction: InquiryExtraction,
-    openai: OpenAIService,
+    ai_service: AIService,
     confidence_threshold: float,
     rules_prompt: str = "",
     memory_context: str = "",
@@ -191,7 +196,7 @@ async def recheck_fields(
             extraction=extraction.model_dump_json(),
         )
         recheck = await _extract_structured(
-            documents, prompt, FieldsRecheck, openai, rules_prompt, memory_context
+            documents, prompt, FieldsRecheck, ai_service, rules_prompt, memory_context
         )
         updates = {field.field_id: field.result for field in recheck.fields}
         if (

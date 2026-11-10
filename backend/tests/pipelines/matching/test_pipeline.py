@@ -22,7 +22,7 @@ pytestmark = pytest.mark.integration
 
 @pytest.mark.parametrize("position_count", [0, 2])
 async def test_matching_agents_use_feedback_tools_and_preserve_source_conflicts(
-    openai_service: Mock,
+    ai_service: Mock,
     model_responses: dict[str, dict[str, Any]],
     model_requests: list[dict[str, Any]],
     position_count: int,
@@ -54,7 +54,7 @@ async def test_matching_agents_use_feedback_tools_and_preserve_source_conflicts(
     sessions = Mock(spec=async_sessionmaker)
     agents = MatchingAgents(
         sessions,
-        openai_service,
+        ai_service,
         MatchingMemoryRepository(InMemoryStore()),
     )
 
@@ -84,23 +84,23 @@ async def test_matching_agents_use_feedback_tools_and_preserve_source_conflicts(
 
 
 async def test_matching_rejects_invalid_concurrency_before_ai_calls(
-    openai_service: Mock,
+    ai_service: Mock,
 ) -> None:
     job = MatchingJob(
         extraction_job_id=uuid4(), inquiry_id=uuid4(), input_data={}
     ).to_model()
     agents = MatchingAgents(
         Mock(spec=async_sessionmaker),
-        openai_service,
+        ai_service,
         MatchingMemoryRepository(InMemoryStore()),
     )
     with pytest.raises(ValueError, match="Matching concurrency must be positive"):
         await run_matching_pipeline(job, agents, concurrency=0)
-    openai_service.get_chat_model.assert_not_called()
+    ai_service.get_chat_model.assert_not_called()
 
 
 async def test_matching_rejects_candidates_not_retrieved_by_tools(
-    openai_service: Mock, model_responses: dict[str, dict[str, Any]]
+    ai_service: Mock, model_responses: dict[str, dict[str, Any]]
 ) -> None:
     model_responses["MatchDecision"] = MatchDecision(
         entity_id=str(uuid4()), confidence=0.9, reason="Invented candidate."
@@ -110,7 +110,7 @@ async def test_matching_rejects_candidates_not_retrieved_by_tools(
     ).to_model()
     agents = MatchingAgents(
         Mock(spec=async_sessionmaker),
-        openai_service,
+        ai_service,
         MatchingMemoryRepository(InMemoryStore()),
     )
 

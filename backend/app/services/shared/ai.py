@@ -12,11 +12,11 @@ from app.config import Settings
 logger = structlog.get_logger(__name__)
 
 
-class OpenAIService:
+class AIService:
     def __init__(self, settings: Settings) -> None:
-        if not settings.OPENAI_API_KEY:
-            raise ValueError("OPENAI_API_KEY must be configured")
-        self._api_key = SecretStr(settings.OPENAI_API_KEY)
+        if not settings.API_KEY:
+            raise ValueError("API_KEY must be configured")
+        self._api_key = SecretStr(settings.API_KEY)
         self._model_name = settings.MODEL
         self._timeout = 120.0
         self._max_retries = 0
@@ -46,7 +46,7 @@ class OpenAIService:
             finally:
                 await self.client.close()
         except Exception:
-            logger.exception("openai_client_close_failed")
+            logger.exception("ai_client_close_failed")
             raise
 
     def get_chat_model(self) -> ChatOpenAI:

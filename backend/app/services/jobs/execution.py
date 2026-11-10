@@ -16,8 +16,8 @@ from app.pipelines.matching.pipeline import run_matching_pipeline
 from app.services.domain.rules import RuleService
 from app.services.jobs.extractions import ExtractionService
 from app.services.jobs.matching import MatchingService
+from app.services.shared.ai import AIService
 from app.services.shared.minio import MinioService
-from app.services.shared.openai import OpenAIService
 
 logger = structlog.get_logger(__name__)
 
@@ -55,11 +55,11 @@ class ExtractionExecutionService:
             documents = await self.extractions.source_documents(
                 job.inquiry_id, job.document_id
             )
-            async with OpenAIService(self.settings) as openai:
+            async with AIService(self.settings) as ai_service:
                 result = await run_pipeline(
                     documents,
                     self.storage,
-                    openai,
+                    ai_service,
                     report_progress,
                     self.settings.EXTRACTION_CONFIDENCE_THRESHOLD,
                     prompt,
@@ -100,11 +100,11 @@ class MatchingExecutionService:
             async with (
                 asyncio.timeout(self.settings.MATCHING_TIMEOUT_SECONDS),
                 matching_memory(self.settings, self.sessions) as memory,
-                OpenAIService(self.settings) as openai,
+                AIService(self.settings) as ai_service,
             ):
                 agents = MatchingAgents(
                     self.sessions,
-                    openai,
+                    ai_service,
                     memory,
                     prompt,
                     recursion_limit=self.settings.RECURSION_LIMIT,

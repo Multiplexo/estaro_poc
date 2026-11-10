@@ -21,7 +21,7 @@ from app.pipelines.guardrails import GUARDRAILS_SYSTEM_PROMPT, create_guardrails
 from app.pipelines.matching.prompts import ARTICLE_PROMPT, CUSTOMER_PROMPT
 from app.pipelines.matching.tools.customer_tools import create_customer_tools
 from app.pipelines.matching.tools.position_tools import create_position_tools
-from app.services.shared.openai import OpenAIService
+from app.services.shared.ai import AIService
 
 logger = structlog.get_logger(__name__)
 
@@ -30,14 +30,14 @@ class MatchingAgents:
     def __init__(
         self,
         sessions: async_sessionmaker[AsyncSession],
-        openai: OpenAIService,
+        ai_service: AIService,
         memory: MatchingMemoryRepository,
         rules_prompt: str = "",
         *,
         recursion_limit: int,
     ) -> None:
         self.sessions = sessions
-        self.openai = openai
+        self.ai_service = ai_service
         self.memory = memory
         self.rules_prompt = rules_prompt
         self.recursion_limit = recursion_limit
@@ -45,12 +45,12 @@ class MatchingAgents:
     async def customer(self, data: InquiryData) -> MatchResult:
         candidates: dict[str, Customer] = {}
         agent = create_agent(
-            self.openai.get_chat_model(),
+            self.ai_service.get_chat_model(),
             tools=create_customer_tools(self.sessions, self.memory, candidates),
             system_prompt=CUSTOMER_PROMPT
             + self.rules_prompt
             + GUARDRAILS_SYSTEM_PROMPT,
-            middleware=create_guardrails(self.openai.get_chat_model()),
+            middleware=create_guardrails(self.ai_service.get_chat_model()),
             response_format=ProviderStrategy(
                 convert_to_json_schema(MatchDecision, strict=True), strict=True
             ),
@@ -75,10 +75,10 @@ class MatchingAgents:
     async def article(self, data: InquiryData, position_index: int) -> MatchResult:
         candidates: dict[str, Article] = {}
         agent = create_agent(
-            self.openai.get_chat_model(),
+            self.ai_service.get_chat_model(),
             tools=create_position_tools(self.sessions, self.memory, candidates),
             system_prompt=ARTICLE_PROMPT + self.rules_prompt + GUARDRAILS_SYSTEM_PROMPT,
-            middleware=create_guardrails(self.openai.get_chat_model()),
+            middleware=create_guardrails(self.ai_service.get_chat_model()),
             response_format=ProviderStrategy(
                 convert_to_json_schema(MatchDecision, strict=True), strict=True
             ),

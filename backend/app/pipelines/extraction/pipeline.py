@@ -14,8 +14,8 @@ from app.persistence.jobs.extractions.memory_repository import ReviewedMemoryRep
 from app.pipelines.extraction.document_classification import document_classification
 from app.pipelines.extraction.extract import extract_inquiry, recheck_fields
 from app.pipelines.extraction.load import load_document
+from app.services.shared.ai import AIService
 from app.services.shared.minio import MinioService
-from app.services.shared.openai import OpenAIService
 
 logger = structlog.get_logger(__name__)
 
@@ -51,7 +51,7 @@ def extraction_memory_context(examples: list[ExtractionFeedback]) -> str:
 async def run_pipeline(
     sources: list[InquiryDocument],
     minio: MinioService,
-    openai: OpenAIService,
+    ai_service: AIService,
     report_progress: Callable[[str, int], Awaitable[None]],
     confidence_threshold: float,
     rules_prompt: str = "",
@@ -87,7 +87,7 @@ async def run_pipeline(
     await report_progress("extract", 2)
     extraction = await extract_inquiry(
         classified,
-        openai,
+        ai_service,
         rules_prompt,
         memory_context,
     )
@@ -97,7 +97,7 @@ async def run_pipeline(
     extraction = await recheck_fields(
         classified,
         extraction,
-        openai,
+        ai_service,
         confidence_threshold,
         rules_prompt,
         memory_context,

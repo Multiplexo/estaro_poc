@@ -1,3 +1,45 @@
+## Getting started
+
+Install Docker with Compose, uv, Python 3.13+, and Bun 1.4.3+. Run the following
+commands from the repository root, with Docker running.
+
+1. Copy the environment template (the filename is spelled this way in the repo):
+
+   ```sh
+   cp .env.exmaple .env
+   ```
+
+   Set `POSTGRES_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, and
+   `API_KEY` in `.env`, and choose a `MODEL` available to your OpenAI account.
+   Correct `MS_FETCH_ENABLED=fasle` to `MS_FETCH_ENABLED=false`. Microsoft credentials
+   are only needed for Outlook integration.
+
+2. Install backend dependencies, start the infrastructure, and apply migrations:
+
+   ```sh
+   uv --directory backend sync
+   docker compose up -d
+   uv --directory backend run alembic upgrade head
+   ```
+
+3. Start the background worker and scheduler, then the API:
+
+   ```sh
+   docker compose up -d --build extraction_worker deletion_scheduler
+   uv --directory backend run --env-file ../.env uvicorn app.main:app --reload
+   ```
+
+4. In a separate terminal, start the frontend:
+
+   ```sh
+   cd frontend
+   bun install
+   bun run dev
+   ```
+
+Open [the app](http://localhost:5173) or [the API docs](http://localhost:8000/docs).
+
+
 ## Tests
 
 Run from the repository root:

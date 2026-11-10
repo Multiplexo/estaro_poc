@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     MINIO_API_PORT: int = 9000
     MINIO_CONSOLE_PORT: int = 9001
 
-    OPENAI_API_KEY: str = ""
+    API_KEY: str = ""
     MODEL: str = "gtp-6.1-luna"
     RECURSION_LIMIT: int = Field(default=30, ge=1)
 
