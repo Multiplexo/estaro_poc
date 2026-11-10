@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import type { ApiClient } from './api'
 import type { ExtractedField, ExtractionJobStatus, ExtractionReview, Inquiry, InquiryExtraction, RequestParams } from './generated/Api'
 import type { AnalysisResponse, ExtractionResult, InquiryOverview, InquiryResponse, InquiryReview, JobSummary, PageInquiryOverview, VerifiedField } from './inquiry-models'
@@ -35,9 +36,9 @@ export function processingJobSummary(job: ExtractionJobStatus, matching?: Pick<M
 }
 
 export function inquiryResponse(inquiry: Inquiry): InquiryResponse {
-  if (!inquiry.id) throw new Error('Die Anfrage hat keine ID.')
+  if (!inquiry.id) throw new Error(i18n.t('inquiries.missingId'))
   const documents = (inquiry.documents ?? []).map((document) => {
-    if (!document.id) throw new Error('Das Dokument hat keine ID.')
+    if (!document.id) throw new Error(i18n.t('source.missingDocumentId'))
     return { ...document, id: document.id }
   })
   return { ...inquiry, id: inquiry.id, documents, processing_job: null }
@@ -55,7 +56,7 @@ function extractionResult(result: InquiryExtraction, inquiry: InquiryResponse, s
       const start = text !== undefined && offset >= 0 ? Array.from(text.slice(0, offset)).length : 0
       return {
         document_id: citation.document_id,
-        filename: documentsById.get(citation.document_id)?.filename ?? 'Dokument',
+        filename: documentsById.get(citation.document_id)?.filename ?? i18n.t('source.document'),
         section_id: citation.section_id, quote: citation.quote,
         page: citation.page_number, start, end: start + Array.from(citation.quote).length,
         rectangles: citation.bbox && citation.page_width && citation.page_height ? [{

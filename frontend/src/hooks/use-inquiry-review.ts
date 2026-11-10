@@ -30,8 +30,8 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   const matchingAvailable = analysis.extraction?.review_mode !== 'fields'
   const queryClient = useQueryClient()
   const fields = useMemo(() => analysis.extraction ? analysisFields(analysis.extraction) : [], [analysis.extraction])
-  const evaluation = useMemo(() => analysis.extraction ? createInquiryEvaluation(analysis.extraction, fields) : undefined, [analysis.extraction, fields])
-  const baseTableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, analysis)) : [], [inquiry, analysis])
+  const evaluation = useMemo(() => analysis.extraction ? createInquiryEvaluation(analysis.extraction, fields, t) : undefined, [analysis.extraction, fields, t])
+  const baseTableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, analysis, t), t) : [], [inquiry, analysis, t])
   const editorFields = useMemo(() => {
     const values = new Map(baseTableSections.flatMap((section) => section.fields.map((field) => [field.fieldId, field.value] as const)))
     return fields.map((entry) => values.has(entry.id) ? { ...entry, field: { ...entry.field, value: values.get(entry.id) ?? null } } : entry)
@@ -42,7 +42,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   const allFields = useMemo(() => [...editorFields, ...dataFields], [editorFields, dataFields])
   const groups = useMemo(() => reviewFieldGroups(editorFields), [editorFields])
   const articleFields = useMemo(() => groups.positions.flatMap((position) => position.fields), [groups.positions])
-  const highlights = useMemo(() => fieldHighlights(fields), [fields])
+  const highlights = useMemo(() => fieldHighlights(fields, t), [fields, t])
   const [state, reduce] = useReducer(reviewReducer, analysis.review, createReviewState)
   const currentState = useRef(state)
   useLayoutEffect(() => { currentState.current = state }, [state])
@@ -53,7 +53,7 @@ export function useInquiryReview(inquiryId: string, analysis: AnalysisResponse, 
   // Reconcile during rendering so every view sees the same revision immediately.
   if ((analysis.review?.revision ?? 0) > state.latest.revision) reduce({ type: 'receive', review: analysis.review! })
   const { draft, baseline } = state
-  const tableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, { ...analysis, review: draft })) : [], [inquiry, analysis, draft])
+  const tableSections = useMemo(() => inquiry ? inquiryTableSections(inquiryDetail(inquiry, { ...analysis, review: draft }, t), t) : [], [inquiry, analysis, draft, t])
   const tableValues = new Map(tableSections.flatMap((section) => section.fields.map((field) => [field.fieldId, field.value ?? ''] as const)))
   const dirty = useMemo(() => reviewIsDirty({ draft, baseline }), [draft, baseline])
   const conflict = reviewHasConflict(state)

@@ -1,7 +1,10 @@
-import { expect, test } from 'bun:test'
+import { afterEach, expect, test } from 'bun:test'
+import * as testing from '@testing-library/react/pure'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { JobStatus } from '../src/components/inquiries/job-status'
 import type { ProcessingJob } from '../src/lib/api'
+
+afterEach(() => testing.cleanup())
 
 function job(values: Partial<ProcessingJob> = {}): ProcessingJob {
   return {
@@ -30,7 +33,7 @@ test('shows the active pipeline step and saved progress', () => {
   expect(html).toContain('role="status"')
 })
 
-test('distinguishes a queued retry from the first queued attempt', () => {
+test('distinguishes a queued retry and shows its error in the details popover', async () => {
   const queued = renderToStaticMarkup(<JobStatus job={job()} />)
   const retry = renderToStaticMarkup(
     <JobStatus job={job({ attempts: 1, last_error: 'Timeout after 300s' })} />,
@@ -38,10 +41,14 @@ test('distinguishes a queued retry from the first queued attempt', () => {
 
   expect(queued).toContain('In Warteschlange')
   expect(retry).toContain('Wiederholung geplant')
-  expect(retry).toContain('Letzter Fehler: Timeout after 300s')
+  expect(retry).toContain('Fehlerdetails anzeigen')
+  const view = testing.render(<JobStatus job={job({ attempts: 1, last_error: 'Timeout after 300s' })} />)
+  expect(view.queryByText('Letzter Fehler: Timeout after 300s')).toBeNull()
+  testing.fireEvent.click(view.getByRole('button', { name: 'Fehlerdetails anzeigen' }))
+  expect(await view.findByText('Letzter Fehler: Timeout after 300s')).toBeTruthy()
 })
 
-test('shows the failed step and its technical error', () => {
+test('shows the failed step and opens its technical error on demand', async () => {
   const html = renderToStaticMarkup(
     <JobStatus job={job({ status: 'failed', step: 'matching', attempts: 3, completed_steps: 2, last_error: 'Matching unavailable' })} />,
   )
@@ -49,7 +56,10 @@ test('shows the failed step and its technical error', () => {
   expect(html).toContain('Fehlgeschlagen')
   expect(html).toContain('Matching · ')
   expect(html).toContain('2/3 Schritte')
-  expect(html).toContain('Matching unavailable')
+  const view = testing.render(<JobStatus job={job({ status: 'failed', step: 'matching', last_error: 'Matching unavailable' })} />)
+  expect(view.queryByText('Letzter Fehler: Matching unavailable')).toBeNull()
+  testing.fireEvent.click(view.getByRole('button', { name: 'Fehlerdetails anzeigen' }))
+  expect(await view.findByText('Letzter Fehler: Matching unavailable')).toBeTruthy()
 })
 
 test('shows completion and does not invent a job for older inquiries', () => {
@@ -64,9 +74,12 @@ test('shows completion and does not invent a job for older inquiries', () => {
   expect(legacy).not.toContain('/3 Schritte')
 })
 
-test('shows matching execution errors only in the separate processing status', () => {
-  const html = renderToStaticMarkup(<JobStatus job={job({ status: 'completed', completed_steps: 3 })} matchingStatus="model_error" />)
-  expect(html).toContain('Matching vorzeitig beendet: Modellfehler')
+test('shows matching execution errors in the processing status details', async () => {
+  const html = renderToStaticMarkup(<JobStatus job={job({ status: 'completed', completed_steps: 3 })} matchingStatus="failed" />)
+  expect(html).toContain('Fehlerdetails anzeigen')
   expect(html).toContain('3/3 Schritte')
   expect(html).not.toContain('fachlicher Konflikt')
+  const view = testing.render(<JobStatus job={job({ status: 'completed', completed_steps: 3 })} matchingStatus="failed" />)
+  testing.fireEvent.click(view.getByRole('button', { name: 'Fehlerdetails anzeigen' }))
+  expect(await view.findByText('Matching vorzeitig beendet: Fehlgeschlagen')).toBeTruthy()
 })

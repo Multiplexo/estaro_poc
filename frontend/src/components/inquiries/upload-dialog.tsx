@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import type { RefObject } from 'react'
 import {
   Dialog,
@@ -15,13 +16,14 @@ type UploadDialogProps = {
 }
 
 export function UploadDialog({ open, onOpenChange, triggerRef }: UploadDialogProps) {
+  const { t } = useTranslation()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent keepMounted finalFocus={triggerRef} className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Anfrage hochladen</DialogTitle>
+          <DialogTitle>{t('upload.title')}</DialogTitle>
           <DialogDescription>
-            Eine PDF-Datei oder E-Mail (.msg, .eml) hochladen und als Anfrage extrahieren lassen.
+            {t('upload.description')}
           </DialogDescription>
         </DialogHeader>
         <UploadForm onSuccess={() => onOpenChange(false)} />

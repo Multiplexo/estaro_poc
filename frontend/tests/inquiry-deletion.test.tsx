@@ -1,18 +1,15 @@
 import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test'
 import type { ReactNode } from 'react'
-import { Window } from 'happy-dom'
+import * as testing from '@testing-library/react/pure'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ApiProvider } from '../src/contexts/api-provider'
 import { useDeleteInquiry } from '../src/hooks/use-delete-inquiry'
 import { useCancelInquiry } from '../src/hooks/use-cancel-inquiry'
 import { InquiryJobActions } from '../src/components/inquiries/inquiry-job-actions'
-import { useInquiries } from '../src/hooks/use-inquiries'
+import { useInquiryInbox } from '../src/hooks/use-inquiry-inbox'
 import { useRecentInquiries } from '../src/hooks/use-recent-inquiries'
 import { createApi, type Inquiry, type JobStatus } from '../src/lib/api'
-import { isJobActive, jobStatusLabel } from '../src/lib/jobs'
 
-let testing: typeof import('@testing-library/react/pure')
-const originals = new Map<string, PropertyDescriptor | undefined>()
 const clients: QueryClient[] = []
 let server: ReturnType<typeof Bun.serve>
 let inquiries: Inquiry[]
@@ -22,30 +19,15 @@ let failure: number | null
 let release: (() => void) | undefined
 let hold: Promise<void> | undefined
 
-beforeAll(async () => {
-  const dom = new Window({ url: 'http://localhost' })
-  const globals = {
-    window: dom, document: dom.document, navigator: dom.navigator,
-    HTMLElement: dom.HTMLElement, Node: dom.Node,
-    IS_REACT_ACT_ENVIRONMENT: true,
-  }
-  for (const [key, value] of Object.entries(globals)) {
-    originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
-    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value })
-  }
-  testing = await import('@testing-library/react/pure')
+beforeAll(() => {
   server = Bun.serve({ port: 0, async fetch(request) {
     const url = new URL(request.url)
-    if (request.method === 'POST' && url.pathname.endsWith('/job/cancel')) {
-      const id = url.pathname.split('/').at(-3)!
-      cancellations.push(id)
-      await hold
-      if (failure) return Response.json({ detail: 'Abbrechen derzeit nicht möglich.' }, { status: failure })
-      const job = inquiries.find((inquiry) => inquiry.id === id)!.processing_job!
-      job.status = job.status === 'queued' ? 'cancelled' : 'cancelling'
-      return Response.json(job)
+    if (request.method === 'POST') {
+      cancellations.push(url.pathname)
+      return new Response(null, { status: 404 })
     }
     if (request.method === 'DELETE') {
+      expect(url.pathname).toStartWith('/api/inquiries/')
       const id = url.pathname.split('/').at(-1)!
       deletions.push(id)
       await hold
@@ -53,9 +35,12 @@ beforeAll(async () => {
       inquiries = inquiries.filter((inquiry) => inquiry.id !== id)
       return new Response(null, { status: 204 })
     }
+    if (url.pathname !== '/api/inquiries/overview') return new Response(null, { status: 404 })
     const offset = Number(url.searchParams.get('offset'))
     const limit = Number(url.searchParams.get('limit'))
-    return Response.json({ items: inquiries.slice(offset, offset + limit), total: inquiries.length })
+    return Response.json({ items: inquiries.slice(offset, offset + limit).map((inquiry) => ({
+      ...inquiry, latest_extraction: { job_id: 'job', result: {}, review: { revision: 0, fields: {} } },
+    })), total: inquiries.length })
   } })
 })
 
@@ -65,13 +50,7 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear())
 })
 
-afterAll(() => {
-  server.stop(true)
-  for (const [key, descriptor] of originals) {
-    if (descriptor) Object.defineProperty(globalThis, key, descriptor)
-    else Reflect.deleteProperty(globalThis, key)
-  }
-})
+afterAll(() => server.stop(true))
 
 function setup(count = 1, status?: JobStatus) {
   inquiries = Array.from({ length: count }, (_, index) => ({
@@ -94,7 +73,10 @@ function setup(count = 1, status?: JobStatus) {
   function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={client}><ApiProvider client={api}>{children}</ApiProvider></QueryClientProvider>
   }
-  return { ...testing.renderHook(() => ({ list: useInquiries(), recent: useRecentInquiries(), deletion: useDeleteInquiry(), cancellation: useCancelInquiry() }), { wrapper: Wrapper }), client, Wrapper }
+  return { ...testing.renderHook(() => {
+    const { query, page, setPage } = useInquiryInbox()
+    return { list: { ...query, page, setPage }, recent: useRecentInquiries(), deletion: useDeleteInquiry(), cancellation: useCancelInquiry() }
+  }, { wrapper: Wrapper }), client, Wrapper }
 }
 
 test('canceling the confirmation leaves the inquiry untouched', async () => {
@@ -173,46 +155,23 @@ test.each([409, 503])('HTTP %s keeps the dialog and inquiry available for retry'
   expect(view.result.current.list.data?.items).toEqual([])
 })
 
-test('cancelling queued work sends one request, refreshes lists and invalidates detail caches', async () => {
-  const view = setup(1, 'queued')
+test.each(['queued', 'running'] as const)('cancelling %s work reports the unavailable capability without sending a request', async (status) => {
+  const view = setup(1, status)
   await testing.waitFor(() => expect(view.result.current.list.data?.total).toBe(1))
-  const keys = [['inquiry', 'inquiry-0'], ['inquiry-job', 'inquiry-0'], ['inquiry-analysis', 'inquiry-0'], ['inquiries', 'queue', 0]]
+  const keys = [['inquiry', 'inquiry-0'], ['inquiry-job', 'inquiry-0'], ['inquiry-analysis', 'inquiry-0']]
   keys.forEach((key) => view.client.setQueryData(key, { cached: true }))
-  hold = new Promise<void>((resolve) => { release = resolve })
   testing.act(() => view.result.current.cancellation.cancel('inquiry-0'))
-  await testing.waitFor(() => expect(cancellations).toEqual(['inquiry-0']))
-  expect(view.result.current.cancellation.isPending).toBe(true)
-  testing.act(() => view.result.current.cancellation.cancel('inquiry-0'))
-  release!()
   await testing.waitFor(() => {
     expect(view.result.current.cancellation.isPending).toBe(false)
-    expect(view.result.current.list.data?.items[0]?.processing_job?.status).toBe('cancelled')
+    expect(view.result.current.cancellation.error).toBe('Diese Funktion wird von der aktuellen API nicht angeboten.')
   })
-  expect(cancellations).toEqual(['inquiry-0'])
+  expect(cancellations).toEqual([])
   expect(deletions).toEqual([])
+  expect(inquiries[0].processing_job?.status).toBe(status)
   keys.forEach((key) => expect(view.client.getQueryState(key)?.isInvalidated).toBe(true))
-  expect(isJobActive(view.result.current.list.data!.items[0].processing_job)).toBe(false)
-  expect(jobStatusLabel(view.result.current.list.data!.items[0].processing_job)).toBe('Abgebrochen')
 })
 
-test('cancellation errors allow retry and running work remains active while stopping', async () => {
-  const view = setup(1, 'running')
-  failure = 503
-  testing.act(() => view.result.current.cancellation.cancel('inquiry-0'))
-  await testing.waitFor(() => expect(view.result.current.cancellation.error).toBe('Abbrechen derzeit nicht möglich.'))
-  expect(inquiries[0].processing_job?.status).toBe('running')
-  failure = null
-  testing.act(() => view.result.current.cancellation.cancel('inquiry-0'))
-  await testing.waitFor(() => {
-    expect(view.result.current.list.data?.items[0]?.processing_job?.status).toBe('cancelling')
-    expect(view.result.current.cancellation.isPending).toBe(false)
-  })
-  expect(isJobActive(view.result.current.list.data!.items[0].processing_job)).toBe(true)
-  expect(jobStatusLabel(view.result.current.list.data!.items[0].processing_job)).toBe('Wird abgebrochen …')
-  expect(deletions).toEqual([])
-})
-
-test.each(['queued', 'running', 'cancelling', 'cancelled'] as const)('queue actions for %s work only allow deletion when safe', async (status) => {
+test.each(['queued', 'running', 'cancelling', 'cancelled'] as const)('queue actions for %s work keep cancellation unavailable and allow deletion', async (status) => {
   const view = setup(1, status)
   await testing.waitFor(() => {
     expect(view.result.current.list.isSuccess).toBe(true)
@@ -220,19 +179,15 @@ test.each(['queued', 'running', 'cancelling', 'cancelled'] as const)('queue acti
   })
   const actions = testing.render(<InquiryJobActions inquiry={inquiries[0]} deletion={view.result.current.deletion} />, { wrapper: view.Wrapper })
   const remove = actions.getByRole('button', { name: 'Löschen' }) as HTMLButtonElement
-  expect(remove.disabled).toBe(status === 'running' || status === 'cancelling')
+  expect(remove.disabled).toBe(false)
+  testing.fireEvent.click(remove)
+  expect(view.result.current.deletion.inquiry?.id).toBe('inquiry-0')
   if (status === 'cancelled') {
     expect(actions.queryByRole('button', { name: 'Verarbeitung abbrechen' })).toBeNull()
   } else {
     const cancel = actions.getByRole('button', { name: status === 'cancelling' ? 'Wird abgebrochen …' : 'Verarbeitung abbrechen' }) as HTMLButtonElement
-    expect(cancel.disabled).toBe(status === 'cancelling')
-    if (status === 'queued') {
-      testing.fireEvent.click(cancel)
-      await testing.waitFor(() => {
-        expect(cancellations).toEqual(['inquiry-0'])
-        expect(view.result.current.list.data?.items[0]?.processing_job?.status).toBe('cancelled')
-        expect(cancel.disabled).toBe(false)
-      })
-    }
+    expect(cancel.disabled).toBe(true)
+    testing.fireEvent.click(cancel)
+    expect(cancellations).toEqual([])
   }
 })

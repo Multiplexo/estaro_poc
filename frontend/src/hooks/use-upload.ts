@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent } from 'react'
 import { useApi } from '@/hooks/use-api'
@@ -26,7 +27,7 @@ export function useUpload(onSuccess: () => void) {
     mutation.reset()
     setFile(selected)
     setValidationError(selected && (!/\.(pdf|msg|eml)$/i.test(selected.name) || !selected.size)
-      ? 'Bitte eine nicht leere PDF-, MSG- oder EML-Datei auswählen.' : undefined)
+      ? i18n.t('upload.invalidFile') : undefined)
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

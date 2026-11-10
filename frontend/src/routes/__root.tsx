@@ -23,7 +23,7 @@ function RootLayout() {
   const { returnInquiryId } = useSearch({ strict: false })
   const rulesInquiryId = pathname === '/regeln' ? returnInquiryId : undefined
   const isReview = pathname.startsWith('/anfragen/') && pathname.endsWith('/pruefung')
-  const section = pathname.startsWith('/kunden') ? 'Kunden' : pathname.startsWith('/artikel') ? 'Artikel' : pathname.startsWith('/regeln') ? 'Regeln' : pathname.startsWith('/einstellungen') ? 'Einstellungen' : 'Anfragen'
+  const section = pathname.startsWith('/kunden') ? t('navigation.customers') : pathname.startsWith('/artikel') ? t('navigation.articles') : pathname.startsWith('/regeln') ? t('navigation.rules') : pathname.startsWith('/einstellungen') ? t('navigation.settings') : t('navigation.inquiries')
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -33,8 +33,8 @@ function RootLayout() {
           <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-4 border-b bg-card px-4 md:px-7">
             <SidebarTrigger className="size-9" aria-label={t('navigation.toggleSidebar')} title={t('navigation.toggleSidebar')} />
             <span aria-hidden="true" className="h-5 w-px bg-border" />
-            <nav aria-label="Brotkrümelnavigation" className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-sm">
-              <Link to="/" className="text-muted-foreground hover:text-foreground">Arbeitsbereich</Link>
+            <nav aria-label={t('navigation.breadcrumbs')} className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-sm">
+              <Link to="/" className="text-muted-foreground hover:text-foreground">{t('navigation.workspace')}</Link>
               <ChevronRight aria-hidden="true" className="size-3.5 text-muted-foreground" />
               {inquiryId || rulesInquiryId
                 ? <InquiryBreadcrumbs inquiryId={(inquiryId || rulesInquiryId)!} isReview={isReview} isRules={!!rulesInquiryId} />

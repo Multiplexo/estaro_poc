@@ -4,7 +4,7 @@ import { InquiryEmailCard } from '../src/components/inquiries/inquiry-email-card
 import { InquiryDetailsCard } from '../src/components/inquiries/inquiry-details-card'
 import { InquiryDetailSidebar } from '../src/components/inquiries/inquiry-detail-sidebar'
 import { inquiryDetail } from '../src/lib/inquiry-detail'
-import type { AnalysisResponse, InquiryResponse } from '../src/lib/generated/Api'
+import type { AnalysisResponse, InquiryResponse } from '../src/lib/inquiry-models'
 
 const inquiry: InquiryResponse = {
   id: 'inquiry', created_at: '2026-10-28T10:00:00Z', documents: [], file_types: [], processing_job: null,

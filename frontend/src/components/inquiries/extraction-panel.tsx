@@ -32,8 +32,8 @@ export function ExtractionPanel({ editor: review, view: controlledView, onViewCh
     <Tabs value={view} onValueChange={(value) => setView(value as 'overview' | 'matching' | 'table')} className="min-h-0 flex-1 gap-0">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-2 border-b px-3 py-1.5">
         <InquiryViewTabs review />
-        {onTogglePdf ? <Button variant="ghost" size="sm" className="h-10 text-muted-foreground" aria-label={showPdf ? 'Original ausblenden' : 'Original anzeigen'} title={showPdf ? 'Original ausblenden' : 'Original anzeigen'} aria-pressed={showPdf} onClick={onTogglePdf}>
-          {showPdf ? <PanelRightClose aria-hidden="true" /> : <PanelRightOpen aria-hidden="true" />}<span className="hidden @min-[36rem]:inline">Original</span>
+        {onTogglePdf ? <Button variant="ghost" size="sm" className="h-10 text-muted-foreground" aria-label={showPdf ? t('source.hideOriginal') : t('source.showOriginal')} title={showPdf ? t('source.hideOriginal') : t('source.showOriginal')} aria-pressed={showPdf} onClick={onTogglePdf}>
+          {showPdf ? <PanelRightClose aria-hidden="true" /> : <PanelRightOpen aria-hidden="true" />}<span className="hidden @min-[36rem]:inline">{t('source.originalLabel')}</span>
         </Button> : null}
       </header>
       {view !== 'matching' ? <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3">

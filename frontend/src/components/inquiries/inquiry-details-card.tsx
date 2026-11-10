@@ -18,7 +18,7 @@ export function InquiryDetailsCard({ detail }: { detail: InquiryDetail }) {
         <OverviewField label={t('fields.reference_number')} emphasis={!!detail.reference}>{detail.reference}</OverviewField>
       </dl>
       <div className="rounded-lg border bg-muted/25 p-4">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><CalendarDays aria-hidden="true" className="size-4 text-muted-foreground" />Termine & Fristen</h3>
+        <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold"><CalendarDays aria-hidden="true" className="size-4 text-muted-foreground" />{t('inquiries.datesAndDeadlines')}</h3>
         <dl className="grid gap-5 @sm:grid-cols-2">
           <OverviewField label={t('fields.delivery_date')} emphasis={!!detail.deliveryDate}><InquiryDeliveryDate value={detail.deliveryDate} /></OverviewField>
           <OverviewField label={t('fields.offer_valid_until')} emphasis={!!detail.offerValidUntil}>{detail.offerValidUntil}</OverviewField>
@@ -26,7 +26,7 @@ export function InquiryDetailsCard({ detail }: { detail: InquiryDetail }) {
       </div>
       <div className="border-t pt-5">
         <h3 className="mb-2 text-sm font-semibold">{t('overview.requirements')}</h3>
-        <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">{detail.requirements || <span className="text-muted-foreground">Nicht angegeben</span>}</p>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">{detail.requirements || <span className="text-muted-foreground">{t('common.notSpecified')}</span>}</p>
       </div>
     </CardContent>
   </Card>

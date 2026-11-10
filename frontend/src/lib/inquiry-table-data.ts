@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next'
+import i18n from '@/i18n'
 import type { InquiryDetail } from './inquiry-detail'
 import type { InquiryPosition } from './generated/Api'
 import type { FieldKind } from './inquiry-analysis'
@@ -13,17 +15,17 @@ const inquiryFields: Partial<Record<InquiryFieldPath, FieldKind>> = {
 }
 const positionFields: Partial<Record<keyof InquiryPosition, FieldKind>> = { bezeichnung: 'article', bezeichnung2: 'material', dimensionstext: 'dimensions', menge: 'quantity', mengeneinheit: 'unit', langtext: 'requirements', zusatzinfos: 'alternatives', zeugnis: 'certificates' }
 
-export function inquiryTableSections(detail: InquiryDetail) {
+export function inquiryTableSections(detail: InquiryDetail, t: TFunction = i18n.t) {
   const sections = [
-    { label: 'Extrahierte Referenz und Kontaktdaten', fields: [
-      { id: 'anfragenummer', fieldId: 'inquiry_number', label: 'Anfragenummer', value: detail.inquiryNumber },
-      { id: 'kontakt.email', fieldId: 'contact_email', label: 'E-Mail', value: detail.contactEmail },
-      { id: 'kontakt.telefon', fieldId: 'contact_phone', label: 'Telefon', value: detail.contactPhone },
+    { label: t('inquiries.extractedContactSection'), fields: [
+      { id: 'anfragenummer', fieldId: 'inquiry_number', label: t('fields.inquiry_number'), value: detail.inquiryNumber },
+      { id: 'kontakt.email', fieldId: 'contact_email', label: t('source.email'), value: detail.contactEmail },
+      { id: 'kontakt.telefon', fieldId: 'contact_phone', label: t('masterData.phone'), value: detail.contactPhone },
     ] },
     ...detail.sections.map((section) => ({ ...section, fields: section.fields.map((field) => ({ ...field, fieldId: inquiryFields[field.id] ?? `data:${field.id}` })) })),
     ...detail.positionData.map((position, index) => ({
-      label: `Position ${index + 1}`, fields: positionSchemaFields.map((definition) => ({
-        id: `positionen.${index}.${definition.path}`, label: definition.label,
+      label: t('overview.position', { number: index + 1 }), fields: positionSchemaFields.map((definition) => ({
+        id: `positionen.${index}.${definition.path}`, label: t(definition.labelKey),
         fieldId: positionFields[definition.path] ? `item-${index}-${positionFields[definition.path]}` : `data:positionen.${index}.${definition.path}`,
         value: position[definition.path] ?? null,
       })),

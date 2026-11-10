@@ -1,3 +1,5 @@
+import type { ParseKeys } from 'i18next'
+import i18n from '@/i18n'
 import type { ApiClient } from './api'
 
 export type RuleCategory = 'extraction' | 'matching'
@@ -26,30 +28,30 @@ export interface Rule extends RuleInput {
   updated_at: string
 }
 
-export const ruleCategories: Record<RuleCategory, string> = { extraction: 'Extraktion', matching: 'Matching' }
+export const ruleCategoryKeys: Record<RuleCategory, ParseKeys> = { extraction: 'jobs.extraction', matching: 'jobs.matching' }
 
 export const ruleSections: Record<RuleCategory, readonly RuleSection[]> = {
   extraction: ['customer_contact', 'inquiry_data', 'articles'],
   matching: ['kundeninformationen', 'beleginformationen', 'lieferadresse', 'rechnungsadresse', 'kopftext', 'belegdetails', 'preisUndSteuerbasis', 'angebotsdetails', 'positionen'],
 }
 
-export const ruleSectionLabels: Record<RuleSection, string> = {
-  customer_contact: 'Kunde & Kontakt',
-  inquiry_data: 'Anfragedaten',
-  articles: 'Artikel',
-  kundeninformationen: 'Kundeninformationen',
-  beleginformationen: 'Beleginformationen',
-  lieferadresse: 'Lieferadresse',
-  rechnungsadresse: 'Rechnungsadresse',
-  kopftext: 'Kopftext',
-  belegdetails: 'Belegdetails',
-  preisUndSteuerbasis: 'Preis- und Steuerbasis',
-  angebotsdetails: 'Angebotsdetails',
-  positionen: 'Position',
+export const ruleSectionKeys: Record<RuleSection, ParseKeys> = {
+  customer_contact: 'review.customerSection',
+  inquiry_data: 'review.requestSection',
+  articles: 'navigation.articles',
+  kundeninformationen: 'schema.groups.kundeninformationen',
+  beleginformationen: 'schema.groups.beleginformationen',
+  lieferadresse: 'schema.groups.lieferadresse',
+  rechnungsadresse: 'schema.groups.rechnungsadresse',
+  kopftext: 'schema.groups.kopftext',
+  belegdetails: 'schema.groups.belegdetails',
+  preisUndSteuerbasis: 'schema.groups.preisUndSteuerbasis',
+  angebotsdetails: 'schema.groups.angebotsdetails',
+  positionen: 'traffic.position',
 }
 
 export function ruleSectionLabel(section: RuleSection | null | undefined): string {
-  return section ? ruleSectionLabels[section] : 'Nicht kategorisiert'
+  return section ? i18n.t(ruleSectionKeys[section]) : i18n.t('rules.uncategorized')
 }
 
 export async function listRules(api: ApiClient, documentId: string | undefined, signal: AbortSignal): Promise<Rule[]> {

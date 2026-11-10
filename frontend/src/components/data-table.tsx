@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import type { RowData } from '@tanstack/react-table'
 import { Search } from 'lucide-react'
 import { DataTablePagination } from '@/components/data-table-pagination'
@@ -19,6 +20,7 @@ type DataTableProps<T extends RowData> = {
 }
 
 export function DataTable<T extends { id?: string | number | null }>({ resource, columns, caption, emptyMessage, searchLabel, searchPlaceholder }: DataTableProps<T>) {
+  const { t } = useTranslation()
   const { search, setSearch, table, query, rows, columnWidths, tableWidth } = usePaginatedTable(resource, columns)
 
   return (
@@ -41,11 +43,11 @@ export function DataTable<T extends { id?: string | number | null }>({ resource,
       {query.isError ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
           <p>{query.error.message}</p>
-          <Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>Erneut versuchen</Button>
+          <Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>{t('navigation.retry')}</Button>
         </div>
       ) : null}
       <p role="status" className="min-h-5 text-sm text-muted-foreground">
-        {query.isFetching ? 'Daten werden geladen …' : null}
+        {query.isFetching ? t('table.loading') : null}
       </p>
       <div className="workspace-panel" aria-busy={query.isFetching}>
         <Table className="table-fixed" style={{ minWidth: tableWidth }}>
@@ -76,7 +78,7 @@ export function DataTable<T extends { id?: string | number | null }>({ resource,
             )) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-center text-muted-foreground" style={{ height: Math.max(96, Math.min(table.state.pagination.pageSize, query.data?.total ?? table.state.pagination.pageSize) * 72) }}>
-                  {query.isPending ? 'Daten werden geladen …' : query.isError ? 'Daten konnten nicht geladen werden.' : search.trim() ? 'Keine passenden Einträge gefunden.' : emptyMessage}
+                  {query.isPending ? t('table.loading') : query.isError ? t('table.loadError') : search.trim() ? t('table.noResults') : emptyMessage}
                 </TableCell>
               </TableRow>
             )}

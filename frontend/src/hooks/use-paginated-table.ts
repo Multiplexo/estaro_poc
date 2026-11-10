@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import { useQuery } from '@tanstack/react-query'
 import { useTable, type PaginationState } from '@tanstack/react-table'
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
@@ -12,6 +13,7 @@ export function usePaginatedTable<T extends { id?: string | number | null }>(
   resource: PaginatedResource<T>,
   columns: DataTableColumns<T>,
 ) {
+  const { i18n } = useTranslation()
   const api = useApi()
   const [search, setSearch] = useState('')
   const [pagination, setPagination] = useState<PaginationState>({
@@ -19,7 +21,7 @@ export function usePaginatedTable<T extends { id?: string | number | null }>(
     pageSize: 25,
   })
   const { pageIndex, pageSize } = pagination
-  const term = useDeferredValue(search.trim().toLocaleLowerCase('de-DE'))
+  const term = useDeferredValue(search.trim().toLocaleLowerCase(i18n.language))
   const selectResults = useCallback((items: T[]) => filterMasterData(items, term), [term])
   const results = useQuery({
     queryKey: [resource.queryKey],

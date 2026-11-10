@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import { useTranslation } from '@/i18n'
 import { memo, useState } from 'react'
 import { Page } from 'react-pdf'
@@ -30,13 +31,13 @@ export const PdfSourcePage = memo(function PdfSourcePage({ number, total, width,
       const selection = pdfRuleSelection(container)
       if (selection) onAnnotate({ ...selection, page: number })
     } catch (error) {
-      onSelectionError(error instanceof Error ? error.message : 'Textstelle konnte nicht markiert werden.')
+      onSelectionError(error instanceof Error ? error.message : i18n.t('source.selectionError'))
     }
   }
   return (
     <div ref={ref} role="group" aria-label={t('source.pageOf', { number, total })} className={total > 1 ? "space-y-1" : undefined}>
       <p ref={pageHeading} className={total > 1 ? "px-1 text-[11px] text-muted-foreground" : "h-0 overflow-hidden"}>{t('source.pageOf', { number, total })}</p>
-      {marking && !hasText ? <p role="status" className="px-1 text-xs text-muted-foreground">Diese Seite enthält keinen auswählbaren Text. Sie können die Regel auf der Seite „Regeln“ anlegen.</p> : null}
+      {marking && !hasText ? <p role="status" className="px-1 text-xs text-muted-foreground">{t('source.noSelectableText')}</p> : null}
       <div className="overflow-hidden bg-white" style={{ aspectRatio: pageAspectRatio }}
         onPointerUp={(event) => captureSelection(event.currentTarget)}
         onKeyUp={(event) => { if (event.key === 'Shift' || event.key === 'Enter') captureSelection(event.currentTarget) }}>

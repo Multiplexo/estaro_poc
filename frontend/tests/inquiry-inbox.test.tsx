@@ -1,22 +1,29 @@
 import { afterAll, afterEach, beforeAll, expect, spyOn, test } from 'bun:test'
 import type { ReactNode } from 'react'
-import { Window } from 'happy-dom'
+import * as testing from '@testing-library/react/pure'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ApiProvider } from '../src/contexts/api-provider'
 import { useInquiryInbox } from '../src/hooks/use-inquiry-inbox'
 import { useInquiryQueue } from '../src/hooks/use-inquiry-queue'
 import { createApi } from '../src/lib/api'
+import { extractionJobsKey, type TrackedExtraction } from '../src/lib/extraction-jobs'
 import { deadlineHint, inquiryOverview } from '../src/lib/inquiry-overview'
-import type { InquiryOverview } from '../src/lib/generated/Api'
+import type { InquiryOverview } from '../src/lib/inquiry-models'
 import i18n from '../src/i18n'
 
-let testing: typeof import('@testing-library/react/pure')
-const originals = new Map<string, PropertyDescriptor | undefined>()
 const clients: QueryClient[] = []
 let server: ReturnType<typeof Bun.serve>
 let waiting: boolean
 let total: number
 const requests: URL[] = []
+const tracked: TrackedExtraction = {
+  filename: 'Anfrage.pdf',
+  job: {
+    id: 'job-1', inquiry_id: 'inquiry-1', document_id: 'document-1', source_key: null,
+    status: 'running', current_step: null, completed_steps: 0, total_steps: 4,
+    error: null, created_at: '2026-10-28T10:00:00Z', started_at: null, finished_at: null,
+  },
+}
 const row: InquiryOverview = {
   id: 'inquiry-1', created_at: '2026-10-28T10:00:00Z', documents: [], file_types: [],
   processing_job: null, customer_name: 'Muster GmbH', email: 'kunde@example.org',
@@ -24,38 +31,33 @@ const row: InquiryOverview = {
   review_status: 'new', extraction: null,
 }
 
-beforeAll(async () => {
-  const dom = new Window({ url: 'http://localhost' })
-  for (const [key, value] of Object.entries({
-    window: dom, document: dom.document, navigator: dom.navigator,
-    HTMLElement: dom.HTMLElement, Node: dom.Node, IS_REACT_ACT_ENVIRONMENT: true,
-  })) {
-    originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
-    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value })
-  }
-  testing = await import('@testing-library/react/pure')
+beforeAll(() => {
   server = Bun.serve({ port: 0, fetch(request) {
     const url = new URL(request.url)
     requests.push(url)
-    if (url.searchParams.get('view') === 'queue') {
-      return Response.json({ total: waiting ? 1 : 0, items: waiting ? [{ ...row, processing_job: null }] : [] })
+    if (url.pathname === '/api/extractions/job-1') {
+      return Response.json({ ...tracked.job, status: waiting ? 'running' : 'succeeded' })
     }
-    return Response.json({ total: waiting ? 0 : total, items: waiting ? [] : [row] })
+    if (url.pathname === '/api/extractions/job-1/matching') {
+      return Response.json({ id: 'matching-1', status: 'succeeded', error: null })
+    }
+    if (url.pathname === '/api/inquiries/overview') {
+      return Response.json({ total: waiting ? 0 : total, items: waiting ? [] : [{
+        id: row.id, created_at: row.created_at, documents: [],
+        latest_extraction: { job_id: 'job-1', result: {}, review: { revision: 0, fields: {} } },
+      }] })
+    }
+    return new Response(null, { status: 404 })
   } })
 })
 
 afterEach(() => {
   testing.cleanup()
   clients.splice(0).forEach((client) => client.clear())
+  localStorage.clear()
 })
 
-afterAll(() => {
-  server.stop(true)
-  for (const [key, descriptor] of originals) {
-    if (descriptor) Object.defineProperty(globalThis, key, descriptor)
-    else Reflect.deleteProperty(globalThis, key)
-  }
-})
+afterAll(() => server.stop(true))
 
 function setup(queued = false) {
   waiting = queued
@@ -64,6 +66,7 @@ function setup(queued = false) {
   const api = createApi(`${server.url}api`)
   api.instance.defaults.adapter = 'fetch'
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(extractionJobsKey, queued ? [tracked] : [])
   clients.push(client)
   function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={client}><ApiProvider client={api}>{children}</ApiProvider></QueryClientProvider>
@@ -79,7 +82,7 @@ test('queue completion refreshes the inbox without changing the selected view', 
   })
   testing.act(() => view.result.current.inbox.setView('table'))
   waiting = false
-  await testing.act(async () => { await view.client.invalidateQueries({ queryKey: ['inquiries', 'queue'] }) })
+  await testing.act(async () => { await view.client.invalidateQueries({ queryKey: extractionJobsKey }) })
   await testing.waitFor(() => expect(view.result.current.inbox.query.data?.items[0].id).toBe(row.id))
   expect(view.result.current.inbox.view).toBe('table')
   expect(view.result.current.queue.data?.total).toBe(0)
@@ -99,7 +102,7 @@ test('search, status and sort reset pagination and reach the overview API', asyn
     const last = requests.filter((url) => url.pathname.endsWith('/overview')).at(-1)!
     expect(last.searchParams.get('search')).toBe('Muster')
     expect(last.searchParams.get('offset')).toBe('0')
-    expect(last.searchParams.get('review_status')).toBe('reviewed')
+    expect(last.searchParams.get('status')).toBe('reviewed')
     expect(last.searchParams.get('sort')).toBe('customer')
   })
 })

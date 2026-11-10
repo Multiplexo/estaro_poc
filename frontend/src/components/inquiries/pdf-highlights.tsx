@@ -1,9 +1,11 @@
+import { useTranslation } from '@/i18n'
 import type { Ref } from 'react'
 import { sourceAccent, type Highlight } from '@/lib/inquiry-analysis'
 
 export function PdfHighlights({ page, highlights, active, activeRef, onSelect, marking = false }: {
   page: number; highlights: Highlight[]; active?: Highlight; activeRef?: Ref<HTMLButtonElement>; onSelect: (highlight: Highlight) => void; marking?: boolean
 }) {
+  const { t } = useTranslation()
   const boxes = new Map<string, { box: NonNullable<Highlight['source']['rectangles']>[number]; entries: Highlight[] }>()
   for (const highlight of highlights) {
     if (highlight.source.page !== page) continue
@@ -15,7 +17,7 @@ export function PdfHighlights({ page, highlights, active, activeRef, onSelect, m
     }
   }
   return (
-    <div className="pointer-events-none absolute inset-0 z-10" role="group" aria-label="Extrahierte Angaben im PDF">
+    <div className="pointer-events-none absolute inset-0 z-10" role="group" aria-label={t('source.extractedHighlights')}>
       {[...boxes].map(([key, { box, entries }]) => {
         const selected = entries.find((entry) => entry.id === active?.id)
         const highlight = selected ?? entries[0]

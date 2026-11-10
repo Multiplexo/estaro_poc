@@ -22,6 +22,7 @@ function ExtractionValues({ entries }: { entries: ExtractionEntry[] }) {
 }
 
 export function MatchingExtraction({ extraction, positionIndex }: { extraction: ExtractionResult; positionIndex?: number }) {
+  const { t } = useTranslation()
   const item = positionIndex === undefined ? undefined : extraction.items[positionIndex]
   const entries: ExtractionEntry[] = positionIndex === undefined
     ? customerFieldKinds.flatMap((kind) => extraction[kind] ? [{ kind, field: extraction[kind] }] : [])
@@ -30,11 +31,11 @@ export function MatchingExtraction({ extraction, positionIndex }: { extraction: 
   const additional = entries.filter(({ kind, field }) => additionalKinds.has(kind) && field.status !== 'conflict' && field.status !== 'unverified' && !!field.value)
 
   return <section aria-labelledby="matching-extraction-heading" className="min-w-0 rounded-lg border bg-muted/25 p-4">
-    <h4 id="matching-extraction-heading" className="flex items-center gap-2 text-sm font-semibold"><FileText aria-hidden="true" className="size-4 text-muted-foreground" />Aus der Extraktion</h4>
-    <p className="mt-1 mb-5 text-xs leading-5 text-muted-foreground">Ursprüngliche Angaben aus der Anfrage.</p>
-    {primary.length ? <ExtractionValues entries={primary} /> : <p className="text-sm text-muted-foreground">Keine extrahierten Angaben vorhanden.</p>}
+    <h4 id="matching-extraction-heading" className="flex items-center gap-2 text-sm font-semibold"><FileText aria-hidden="true" className="size-4 text-muted-foreground" />{t('matching.fromExtraction')}</h4>
+    <p className="mt-1 mb-5 text-xs leading-5 text-muted-foreground">{t('matching.extractionDescription')}</p>
+    {primary.length ? <ExtractionValues entries={primary} /> : <p className="text-sm text-muted-foreground">{t('matching.noExtractedData')}</p>}
     {additional.length ? <details className="mt-4 border-t pt-3 text-sm">
-      <summary className="cursor-pointer text-xs text-muted-foreground">Weitere Angaben ({additional.length})</summary>
+      <summary className="cursor-pointer text-xs text-muted-foreground">{t('matching.additionalFields', { count: additional.length })}</summary>
       <div className="pt-4"><ExtractionValues entries={additional} /></div>
     </details> : null}
   </section>

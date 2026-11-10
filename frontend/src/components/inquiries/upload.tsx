@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import { lazy, Suspense, useRef, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,7 @@ const UploadDialog = lazy(() =>
 )
 
 export function Upload() {
+  const { t } = useTranslation()
   const [state, setState] = useState<'idle' | 'open' | 'closed'>('idle')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const open = state === 'open'
@@ -27,7 +29,7 @@ export function Upload() {
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        <Plus aria-hidden="true" className="size-4" />Upload
+        <Plus aria-hidden="true" className="size-4" />{t('upload.action')}
       </Button>
       {state !== 'idle' ? (
         <Suspense fallback={null}>

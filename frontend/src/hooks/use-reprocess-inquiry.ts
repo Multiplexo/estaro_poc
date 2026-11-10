@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@/lib/api'
 import { restartInquiryExtraction } from '@/lib/inquiry-processing'
@@ -5,6 +6,7 @@ import { useApi } from './use-api'
 import { useInquiryProcessing } from './use-inquiry-processing'
 
 export function useReprocessInquiry(inquiryId: string, { poll = true }: { poll?: boolean } = {}) {
+  const { t } = useTranslation()
   const api = useApi()
   const client = useQueryClient()
   const { job, matching, extracting, matchingActive } = useInquiryProcessing(inquiryId, { poll })
@@ -20,13 +22,13 @@ export function useReprocessInquiry(inquiryId: string, { poll = true }: { poll?:
   const checkingMatching = job.data?.status === 'succeeded' && matching.isPending
   const matchingError = matching.error instanceof ApiError && matching.error.status === 404 ? null : matching.error
   const error = restart.error?.message ?? job.error?.message ?? matchingError?.message
-  const failedStep = job.data?.status === 'failed' ? 'Die Extraktion ist fehlgeschlagen. Du kannst die Verarbeitung erneut starten.' : undefined
+  const failedStep = job.data?.status === 'failed' ? t('jobs.extractionFailedHint') : undefined
 
   return {
     start: () => restart.mutate(),
     busy,
     disabled: busy || job.isPending || job.isError || checkingMatching || !!matchingError || !job.data,
     error: error ?? failedStep,
-    label: restart.isPending ? 'Verarbeitung wird gestartet …' : extracting ? 'Extraktion läuft …' : matchingActive ? 'Matching läuft …' : 'Extraktion und Matching erneut starten',
+    label: restart.isPending ? t('jobs.processingStarting') : extracting ? t('jobs.extracting') : matchingActive ? t('jobs.matchingRunning') : t('jobs.restartAll'),
   }
 }

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { TrafficLightBadge } from '../src/components/inquiries/traffic-light-badge'
-import type { ExtractionResult, VerifiedField, VerifiedItem } from '../src/lib/generated/Api'
+import type { ExtractionResult, VerifiedField, VerifiedItem } from '../src/lib/inquiry-models'
 import { analysisFields } from '../src/lib/inquiry-analysis'
 import { changeReviewField, confirmPositions, reviewDraft } from '../src/lib/inquiry-review'
 import { createReviewState, reviewIsDirty, reviewReducer } from '../src/lib/inquiry-review-state'

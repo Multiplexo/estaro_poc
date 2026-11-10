@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next'
+import i18n from '@/i18n'
 import { inquirySchemaFields, type InquiryFieldPath } from './inquiry-schema'
 import type { InquiryData } from './generated/Api'
 import type { AnalysisResponse, InquiryResponse, ReadingSource } from './inquiry-models'
@@ -13,16 +15,16 @@ export function emailHeader(source: ReadingSource | undefined, id: string) {
 function extractionNotice(inquiry: InquiryResponse, analysis: AnalysisResponse) {
   if (analysis.extraction) return null
   switch (inquiry.processing_job?.status) {
-    case 'cancelled': return 'Die Verarbeitung wurde abgebrochen. Vorhandene E-Mails und Dateien stehen unten zur Verfügung.'
-    case 'cancelling': return 'Die Verarbeitung wird abgebrochen. Die Anfrage kann anschließend gelöscht werden.'
-    case 'failed': return 'Die Verarbeitung ist fehlgeschlagen. Vorhandene E-Mails und Dateien stehen unten zur Verfügung.'
+    case 'cancelled': return i18n.t('inquiries.extractionCancelled')
+    case 'cancelling': return i18n.t('inquiries.extractionCancelling')
+    case 'failed': return i18n.t('inquiries.extractionFailed')
     case 'queued':
-    case 'running': return 'Die Anfrage wird verarbeitet. Die Informationen werden automatisch ergänzt.'
-    default: return 'Für diese Anfrage liegen noch keine extrahierten Informationen vor.'
+    case 'running': return i18n.t('inquiries.extractionRunning')
+    default: return i18n.t('inquiries.noExtraction')
   }
 }
 
-export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisResponse) {
+export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisResponse, t: TFunction = i18n.t) {
   const sources = analysis.sources ?? []
   const emails = sources.filter((source) => source.file_type !== 'pdf')
   const email = emails.find((source) => !source.parent_document_id) ?? emails[0]
@@ -32,7 +34,7 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
   const extractionValues = new Map(fields.map(({ id, field }) => [id, field.value?.trim() || null]))
   extractionValues.set('document_number', extractionValues.get('document_number') || extractionValues.get('inquiry_number') || null)
   extractionValues.set('data:kundeninformationen.zusatz', [extractionValues.get('contact_email'), extractionValues.get('contact_phone')].filter(Boolean).join('\n') || null)
-  const evaluation = result ? createInquiryEvaluation(result, fields) : undefined
+  const evaluation = result ? createInquiryEvaluation(result, fields, t) : undefined
   const summary = evaluation?.summary(review)
   const values = new Map(fields.map((entry) => [entry.id, reviewedField(entry, review).value]))
   const value = (id: string) => values.get(id)?.trim() || null
@@ -67,9 +69,9 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
   for (const definition of inquirySchemaFields) {
     let current: unknown = data
     for (const part of definition.path.split('.')) current = current && typeof current === 'object' ? (current as Record<string, unknown>)[part] : null
-    const group = sections.get(definition.groupLabel!) ?? []
-    group.push({ id: definition.path, label: definition.label, value: typeof current === 'string' ? current : null })
-    sections.set(definition.groupLabel!, group)
+    const group = sections.get(t(definition.groupLabelKey!)) ?? []
+    group.push({ id: definition.path, label: t(definition.labelKey), value: typeof current === 'string' ? current : null })
+    sections.set(t(definition.groupLabelKey!), group)
   }
   const positions = result?.items.map((_, index) => ({
     number: index + 1,
@@ -89,7 +91,7 @@ export function inquiryDetail(inquiry: InquiryResponse, analysis: AnalysisRespon
     extractionValues,
     matchingProvenance: data.matching_provenance ?? {},
     sections: [...sections].map(([label, fields]) => ({ label, fields })),
-    title: emailHeader(email, 'subject') || [value('customer'), value('inquiry_number') || value('reference_number')].filter(Boolean).join(' · ') || inquiry.documents.find((document) => !document.parent_document_id)?.filename || 'Anfrage',
+    title: emailHeader(email, 'subject') || [value('customer'), value('inquiry_number') || value('reference_number')].filter(Boolean).join(' · ') || inquiry.documents.find((document) => !document.parent_document_id)?.filename || t('inquiries.singular'),
     emails, customerId, customerName: data.kundeninformationen?.name ?? null, sender: emailHeader(email, 'sender'),
     reference: value('reference_number'), inquiryNumber: value('inquiry_number'), documentNumber: value('document_number'),
     offerValidUntil: value('offer_valid_until'), deliveryDate: value('delivery_date'), requirements: value('requirements'),

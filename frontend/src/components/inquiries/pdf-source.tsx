@@ -52,14 +52,14 @@ export default function PdfSource({ inquiryId, documentId, pages, highlights, ac
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant={marking ? 'default' : 'outline'} aria-pressed={marking} disabled={!query.file}
             onClick={() => { setMarking(!marking); setMessage(''); setSelectionError(''); window.getSelection()?.removeAllRanges() }}>
-            <Highlighter aria-hidden="true" />{marking ? 'Markieren beenden' : 'Text markieren & Regel erstellen'}
+            <Highlighter aria-hidden="true" />{marking ? t('source.stopMarking') : t('source.createRuleFromText')}
           </Button>
-          <Button size="sm" variant="ghost" render={<Link to="/regeln" search={{ returnInquiryId: inquiryId }} />}><ListChecks aria-hidden="true" />Regeln</Button>
+          <Button size="sm" variant="ghost" render={<Link to="/regeln" search={{ returnInquiryId: inquiryId }} />}><ListChecks aria-hidden="true" />{t('navigation.rules')}</Button>
         </div>
-        <p className="text-xs text-muted-foreground">{marking ? 'Markieren Sie Text auf einer PDF-Seite. Anschließend können Sie eine Regel dazu formulieren.' : 'Blaue Markierungen zeigen Regeln. Zum Bearbeiten anklicken.'}</p>
+        <p className="text-xs text-muted-foreground">{marking ? t('source.markingHint') : t('source.ruleHighlightHint')}</p>
         {message ? <p role="status" className="text-xs text-muted-foreground">{message}</p> : null}
         {selectionError ? <p role="alert" className="text-xs text-destructive">{selectionError}</p> : null}
-        {rules.isError ? <p role="alert" className="text-xs text-destructive">Regel-Markierungen konnten nicht geladen werden. <button type="button" className="underline" onClick={() => void rules.refetch()}>Erneut versuchen</button></p> : null}
+        {rules.isError ? <p role="alert" className="text-xs text-destructive">{t('source.ruleLoadError')} <button type="button" className="underline" onClick={() => void rules.refetch()}>{t('navigation.retry')}</button></p> : null}
       </div>
       {query.isPending ? <p role="status">{t('source.loadingPdf')}</p> : null}
       {query.isError ? <p role="alert" className="text-destructive">{query.error.message}</p> : null}
@@ -78,7 +78,7 @@ export default function PdfSource({ inquiryId, documentId, pages, highlights, ac
       ) : null}
       {editor ? <RuleEditorDialog rule={editor.rule} source={editor.source} onClose={() => setEditor(null)} onSaved={() => {
         setMarking(false)
-        setMessage('Regel gespeichert. Aktive Regeln gelten für künftige Durchläufe.')
+        setMessage(t('rules.saved'))
       }} /> : null}
     </div>
   )

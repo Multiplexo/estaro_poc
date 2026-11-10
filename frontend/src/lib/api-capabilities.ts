@@ -1,5 +1,8 @@
-export const unavailableMessage = 'Diese Funktion wird von der aktuellen API nicht angeboten.'
+import i18n from '@/i18n'
+export function unavailableMessage(): string {
+  return i18n.t('common.unavailableFeature')
+}
 
 export function unavailable<T>(): Promise<T> {
-  return Promise.reject(new Error(unavailableMessage))
+  return Promise.reject(new Error(unavailableMessage()))
 }

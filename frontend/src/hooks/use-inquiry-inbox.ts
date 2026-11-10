@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PAGE_SIZE } from '@/hooks/use-inquiries'
+import { PAGE_SIZE } from '@/lib/inquiry-overview'
 import type { InquiryOverview } from '@/lib/inquiry-models'
 import { useInquiryOverviews } from './use-inquiry-overviews'
 

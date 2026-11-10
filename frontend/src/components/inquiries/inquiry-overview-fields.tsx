@@ -1,11 +1,13 @@
+import { useTranslation } from '@/i18n'
 import { Badge } from '@/components/ui/badge'
 import { deadlineHint, formatInboxDate, type InboxInquiry } from '@/lib/inquiry-overview'
 
 export function InquiryReceivedAt({ inquiry }: { inquiry: InboxInquiry }) {
+  const { t } = useTranslation()
   return inquiry.email_received_at ? (
     <time dateTime={inquiry.email_received_at}>{formatInboxDate(inquiry.email_received_at)}</time>
   ) : (
-    <span className="text-muted-foreground" title={`Upload: ${formatInboxDate(inquiry.created_at)}`}>Nicht bekannt</span>
+    <span className="text-muted-foreground" title={t('inquiries.uploadedAtLabel', { date: formatInboxDate(inquiry.created_at) })}>{t('common.unknownValue')}</span>
   )
 }
 
@@ -18,5 +20,6 @@ export function InquiryDeliveryDate({ value }: { value: string | null }) {
 }
 
 export function InquiryEmail({ value }: { value: string | null }) {
-  return value ? <span className="break-all">{value}</span> : <span className="text-muted-foreground">Nicht bekannt</span>
+  const { t } = useTranslation()
+  return value ? <span className="break-all">{value}</span> : <span className="text-muted-foreground">{t('common.unknownValue')}</span>
 }

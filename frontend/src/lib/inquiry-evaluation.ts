@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import i18n from '../i18n'
 import type { ExtractionResult, InquiryOverview, MatchCandidate } from './inquiry-models'
 import { analysisFields, fieldStyles, isCustomerIdentityField, type AnalysisField, type AnalysisResult } from './inquiry-analysis'
@@ -8,7 +9,7 @@ const requiredKinds = new Set(['article', 'material', 'dimensions', 'quantity', 
 const noCandidates: MatchCandidate[] = []
 const noFields: AnalysisField[] = []
 
-export function createInquiryEvaluation(result: AnalysisResult & Pick<ExtractionResult, 'customer_match' | 'matching' | 'review_mode'>, fields = analysisFields(result)) {
+export function createInquiryEvaluation(result: AnalysisResult & Pick<ExtractionResult, 'customer_match' | 'matching' | 'review_mode'>, fields = analysisFields(result), t: TFunction = i18n.t) {
   const sharedFields: AnalysisField[] = []
   const customerFields: AnalysisField[] = []
   const positions = new Map<string, AnalysisField[]>()
@@ -44,37 +45,37 @@ export function createInquiryEvaluation(result: AnalysisResult & Pick<Extraction
       const key = `item-${index}-article`
       const confirmation = review.position_confirmations[key]
       if (result.review_mode === 'fields' && fieldsFor(key).length > 0 && [...sharedFields, ...fieldsFor(key)].every((entry) => reviewedField(entry, review).confirmed)) {
-        return { color: 'green', origin: 'manual', reasons: [i18n.t('traffic.manualReason')], confirmedAt: null }
+        return { color: 'green', origin: 'manual', reasons: [t('traffic.manualReason')], confirmedAt: null }
       }
-      if (result.review_mode !== 'fields' && confirmation) return { color: 'green', origin: 'manual', reasons: [i18n.t('traffic.manualReason')], confirmedAt: confirmation.confirmed_at }
+      if (result.review_mode !== 'fields' && confirmation) return { color: 'green', origin: 'manual', reasons: [t('traffic.manualReason')], confirmedAt: confirmation.confirmed_at }
 
       const conflicts: string[] = []
       const open: string[] = []
       for (const entries of [sharedFields, fieldsFor(key)]) {
         for (const entry of entries) {
           const checked = reviewedField(entry, review)
-          if (!checked.confirmed && entry.field.status === 'conflict') conflicts.push(i18n.t('traffic.fieldConflict', { label: i18n.t(fieldStyles[entry.kind].labelKey), note: entry.field.note || i18n.t('traffic.conflict') }))
-          if (requiredKinds.has(entry.kind) && !checked.value.trim()) open.push(i18n.t('traffic.missing', { label: i18n.t(fieldStyles[entry.kind].labelKey) }))
-          if (!checked.confirmed && entry.field.status === 'unverified') open.push(i18n.t('traffic.unverified', { label: i18n.t(fieldStyles[entry.kind].labelKey) }))
-          if (review.fields[entry.id]) open.push(i18n.t('traffic.confirmPosition'))
+          if (!checked.confirmed && entry.field.status === 'conflict') conflicts.push(t('traffic.fieldConflict', { label: t(fieldStyles[entry.kind].labelKey), note: entry.field.note || t('traffic.conflict') }))
+          if (requiredKinds.has(entry.kind) && !checked.value.trim()) open.push(t('traffic.missing', { label: t(fieldStyles[entry.kind].labelKey) }))
+          if (!checked.confirmed && entry.field.status === 'unverified') open.push(t('traffic.unverified', { label: t(fieldStyles[entry.kind].labelKey) }))
+          if (review.fields[entry.id]) open.push(t('traffic.confirmPosition'))
         }
       }
       for (const [targetKey, selectedId, label] of [
-        ['customer', review.customer_id, i18n.t('fields.customer')],
-        [key, review.article_ids[key], i18n.t('fields.article')],
+        ['customer', review.customer_id, t('fields.customer')],
+        [key, review.article_ids[key], t('fields.article')],
       ] as const) {
         if (result.review_mode === 'fields') continue
         const candidate = candidateFor(targetKey, selectedId)
-        if (candidate?.status === 'different') conflicts.push(...(candidate.reasons?.length ? candidate.reasons : [i18n.t('traffic.masterDifference', { label })]))
+        if (candidate?.status === 'different') conflicts.push(...(candidate.reasons?.length ? candidate.reasons : [t('traffic.masterDifference', { label })]))
         else if (candidate?.status !== 'matching') {
           const legacyCustomer = targetKey === 'customer' && !result.matching && result.customer_match.status === 'matched' &&
             result.customer_match.candidates?.length === 1 && (!selectedId || result.customer_match.candidates[0].id === selectedId)
-          if (!legacyCustomer) open.push(i18n.t('traffic.ambiguousAssignment', { label }))
+          if (!legacyCustomer) open.push(t('traffic.ambiguousAssignment', { label }))
         }
       }
       if (conflicts.length) return { color: 'red', origin: 'system', reasons: [...new Set(conflicts)] }
       if (open.length) return { color: 'yellow', origin: 'system', reasons: [...new Set(open)] }
-      return { color: 'green', origin: 'system', reasons: [i18n.t('traffic.complete')] }
+      return { color: 'green', origin: 'system', reasons: [t('traffic.complete')] }
     },
   }
   return {

@@ -11,7 +11,7 @@ export function InquiryPositions({ detail }: { detail: InquiryDetail }) {
   return <section aria-labelledby="positions-heading" className="space-y-4">
     <div className="flex items-center gap-2">
       <Package aria-hidden="true" className="size-4 text-muted-foreground" />
-      <h2 id="positions-heading" className="text-base font-semibold">Positionen</h2>
+      <h2 id="positions-heading" className="text-base font-semibold">{t('overview.positions')}</h2>
       <span className="rounded-md border bg-card px-2 py-0.5 text-xs tabular-nums text-muted-foreground">{detail.positions.length}</span>
     </div>
     {detail.positions.length ? detail.positions.map((position) => {
@@ -22,7 +22,7 @@ export function InquiryPositions({ detail }: { detail: InquiryDetail }) {
             <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-card text-xs font-semibold tabular-nums text-muted-foreground">{position.number}</span>
             <div className="min-w-0">
               <p className="mb-1 text-xs text-muted-foreground">{t('overview.position', { number: position.number })} · {t('fields.article')}</p>
-              <h3 className="font-semibold [overflow-wrap:anywhere]">{article?.value || 'Artikel nicht angegeben'}</h3>
+              <h3 className="font-semibold [overflow-wrap:anywhere]">{article?.value || t('inquiries.articleNotSpecified')}</h3>
             </div>
           </div>
         </header>

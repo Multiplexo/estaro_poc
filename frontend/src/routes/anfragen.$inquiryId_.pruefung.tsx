@@ -15,8 +15,8 @@ function InquiryDetail() {
   return (
     <div className="space-y-4 lg:flex lg:h-[calc(100dvh-8rem)] lg:min-h-[36rem] lg:flex-col lg:space-y-0 lg:gap-4">
       <header className="min-w-0 shrink-0">
-        <h1 className="text-xl font-semibold tracking-tight">Anfrage prüfen</h1>
-        <p className="text-sm text-muted-foreground">Daten prüfen und Stammdaten zuordnen</p>
+        <h1 className="text-xl font-semibold tracking-tight">{t('review.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('review.pageDescription')}</p>
       </header>
       {data?.extraction ? <InquiryWorkspace key={`${inquiryId}:${data.job_id}`} inquiryId={inquiryId} inquiry={inquiry.data} analysis={{ ...data, extraction: data.extraction }} /> : null}
     </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@/lib/api'
 import { getInquiryMatchingJob, type MatchSelection } from '@/lib/inquiry-processing'
@@ -7,6 +8,7 @@ import type { ReviewPersistence } from './use-inquiry-review'
 import { useApi } from './use-api'
 
 export function useInquiryMatching(inquiryId: string, jobId: string | null | undefined, revision: number, { poll = true, runExclusive }: { poll?: boolean; runExclusive?: ReviewPersistence['runExclusive'] } = {}) {
+  const { t } = useTranslation()
   const api = useApi()
   const client = useQueryClient()
   const job = useQuery({
@@ -24,7 +26,7 @@ export function useInquiryMatching(inquiryId: string, jobId: string | null | und
   })
   const selection = useMutation({
     mutationFn: async (candidate: MatchSelection) => {
-      if (!jobId) throw new Error('Für diese Anfrage liegt keine zuordenbare Extraktion vor.')
+      if (!jobId) throw new Error(t('matching.noMatchingExtraction'))
       const select = async (currentRevision: number) => {
         const { data } = await api.request<InquiryExtractionSnapshot>({
           path: `/extractions/${jobId}/matching/selection`, method: 'PUT',

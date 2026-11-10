@@ -45,12 +45,13 @@ const ReviewDataRow = memo(function ReviewDataRow({ entry, review, selected, onC
 })
 
 export function ReviewDataTable({ editor }: { editor: ReviewEditor }) {
+  const { t } = useTranslation()
   const sections = editor.tableSections
   return <Table className="table-fixed">
-    <TableHeader><TableRow><TableHead scope="col" className="w-[35%]">Feld</TableHead><TableHead scope="col">Wert</TableHead></TableRow></TableHeader>
+    <TableHeader><TableRow><TableHead scope="col" className="w-[35%]">{t('table.field')}</TableHead><TableHead scope="col">{t('table.value')}</TableHead></TableRow></TableHeader>
     {sections.filter((section) => section.fields.length > 0).map((section) => <TableBody key={section.label}>
       <TableRow className="bg-muted/50 hover:bg-muted/50"><th scope="rowgroup" colSpan={2} className="px-3 py-3 text-left text-sm font-semibold">{section.label}</th></TableRow>
-      {section.fields.map((field) => { const entry = editor.tableFields.get(field.fieldId); return entry ? <ReviewDataRow key={field.id} {...editor.fields.view(entry)} label={field.label} path={field.id} automaticMatch={field.automaticMatch} automaticSource={field.automaticSource} /> : <TableRow key={field.id} data-automatic-source={field.automaticSource} className={field.automaticSource ? 'bg-primary/5' : undefined}><th scope="row" className="px-3 py-3 text-left font-medium">{field.label}</th><TableCell>{field.value ?? 'Nicht angegeben'}{field.automaticSource ? <AutomaticFieldSource source={field.automaticSource} match={field.automaticMatch} /> : null}</TableCell></TableRow> })}
+      {section.fields.map((field) => { const entry = editor.tableFields.get(field.fieldId); return entry ? <ReviewDataRow key={field.id} {...editor.fields.view(entry)} label={field.label} path={field.id} automaticMatch={field.automaticMatch} automaticSource={field.automaticSource} /> : <TableRow key={field.id} data-automatic-source={field.automaticSource} className={field.automaticSource ? 'bg-primary/5' : undefined}><th scope="row" className="px-3 py-3 text-left font-medium">{field.label}</th><TableCell>{field.value ?? t('common.notSpecified')}{field.automaticSource ? <AutomaticFieldSource source={field.automaticSource} match={field.automaticMatch} /> : null}</TableCell></TableRow> })}
     </TableBody>)}
   </Table>
 }

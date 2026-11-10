@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, expect, test } from 'bun:test'
 import type { ReactNode } from 'react'
-import { Window } from 'happy-dom'
+import * as testing from '@testing-library/react/pure'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { createMemoryHistory, createRootRoute, createRouter, RouterContextProvider } from '@tanstack/react-router'
 import { ApiProvider } from '../src/contexts/api-provider'
@@ -9,19 +9,20 @@ import { useReviewSections } from '../src/hooks/use-review-sections'
 import { ExtractionPanel } from '../src/components/inquiries/extraction-panel'
 import { ExtractedField } from '../src/components/inquiries/extracted-field'
 import { createApi } from '../src/lib/api'
-import type { AnalysisResponse, InquiryReview } from '../src/lib/generated/Api'
+import { inquiryReview } from '../src/lib/inquiry-api'
+import type { AnalysisResponse, InquiryReview } from '../src/lib/inquiry-models'
 
-let testing: typeof import('@testing-library/react/pure')
-const originals = new Map<string, PropertyDescriptor | undefined>()
 const clients: QueryClient[] = []
 let server: ReturnType<typeof Bun.serve>
 let remote: InquiryReview
 let submissions: InquiryReview[]
 
 const analysis: AnalysisResponse = {
+  job_id: 'job',
   sources: [{ id: 'email', file_type: 'msg', filename: 'Anfrage.msg' }, { id: 'attachment', file_type: 'pdf', filename: 'Anhang.pdf' }],
   review: { revision: 0, fields: {}, customer_id: null },
   extraction: {
+    review_mode: 'fields',
     customer: { value: 'Muster GmbH', status: 'present', sources: [] },
     reference_number: { value: null, status: 'missing', sources: [] },
     requirements: { value: '3.1', status: 'present', sources: [{ document_id: 'attachment', filename: 'Anhang.pdf', section_id: 'page-1', page: 1, quote: '3.1', start: 0, end: 3 }] },
@@ -30,39 +31,29 @@ const analysis: AnalysisResponse = {
   },
 }
 
-beforeAll(async () => {
-  const dom = new Window({ url: 'http://localhost' })
-  const globals = { window: dom, document: dom.document, navigator: dom.navigator, Element: dom.Element, HTMLElement: dom.HTMLElement, Node: dom.Node,
-    requestAnimationFrame: (callback: FrameRequestCallback) => { callback(0); return 0 }, IS_REACT_ACT_ENVIRONMENT: true }
-  for (const [key, value] of Object.entries(globals)) {
-    originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key))
-    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value })
-  }
-  testing = await import('@testing-library/react/pure')
+beforeAll(() => {
   server = Bun.serve({ port: 0, async fetch(request) {
-    if (request.method === 'PUT') {
+    if (request.method === 'PATCH' && new URL(request.url).pathname === '/api/extractions/job/result') {
       const submitted = await request.json() as InquiryReview
       submissions.push(submitted)
       if (submitted.revision !== remote.revision) return Response.json({ detail: 'Review conflict' }, { status: 409 })
       remote = { ...submitted, revision: (remote.revision ?? 0) + 1 }
-      return Response.json(remote)
+      return Response.json({ review: remote })
     }
-    return Response.json({ ...analysis, review: remote })
+    if (request.method === 'GET' && new URL(request.url).pathname === '/api/extractions/job/result') {
+      return Response.json({ review: remote })
+    }
+    return new Response(null, { status: 404 })
   } })
 })
 
-afterEach(() => {
+afterEach(async () => {
   testing.cleanup()
   clients.splice(0).forEach((client) => client.clear())
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 })
 
-afterAll(() => {
-  server.stop(true)
-  for (const [key, descriptor] of originals) {
-    if (descriptor) Object.defineProperty(globalThis, key, descriptor)
-    else Reflect.deleteProperty(globalThis, key)
-  }
-})
+afterAll(() => server.stop(true))
 
 function setup(initial: AnalysisResponse = analysis) {
   remote = initial.review!
@@ -77,7 +68,7 @@ function setup(initial: AnalysisResponse = analysis) {
   }
   const hook = testing.renderHook(() => {
     const query = useQuery({ queryKey: ['inquiry-analysis', 'inquiry'], initialData: initial,
-      queryFn: async () => (await api.requests.getInquiryAnalysisRequestsInquiryIdAnalysisGet('inquiry')).data })
+      queryFn: async () => ({ ...initial, review: inquiryReview((await api.extractions.getExtractionResult('job')).data.review) }) })
     const review = useInquiryReview('inquiry', query.data)
     const sections = useReviewSections(review.editor)
     return { ...review, sections }
@@ -117,7 +108,7 @@ test('the mounted review adopts clean query refreshes and saves the current revi
   await testing.waitFor(() => expect(result.current.editor.fields.value(allFields(result.current.editor)[0]).value).toBe('Remote GmbH'))
   expect(result.current.persistence.dirty).toBe(false)
   testing.act(() => result.current.editor.fields.view(allFields(result.current.editor)[0]).onChange('Local GmbH'))
-  testing.act(() => result.current.persistence.save())
+  await testing.act(async () => { await result.current.persistence.save() })
   await testing.waitFor(() => expect(result.current.persistence.dirty).toBe(false))
   expect(submissions[0].revision).toBe(1)
   expect(remote.revision).toBe(2)
@@ -128,17 +119,17 @@ test('a mounted stale save keeps edits, fetches the new revision and explicitly 
   const requirements = allFields(result.current.editor).find((entry) => entry.id === 'requirements')!
   testing.act(() => result.current.editor.fields.view(requirements).onChange('3.2'))
   remote = { revision: 1, fields: { customer: { value: 'Remote GmbH', confirmed: true } }, customer_id: 'remote-customer' }
-  testing.act(() => result.current.persistence.save())
+  await testing.act(async () => { await expect(result.current.persistence.save()).rejects.toThrow('Review conflict') })
   await testing.waitFor(() => expect(result.current.persistence.canResolveConflict).toBe(true))
   expect(result.current.persistence.conflict).toBe(true)
   expect(result.current.editor.fields.value(requirements).value).toBe('3.2')
-  testing.act(() => result.current.persistence.save())
+  await testing.act(async () => { await expect(result.current.persistence.save()).rejects.toThrow() })
   expect(submissions).toHaveLength(1)
   testing.act(() => result.current.persistence.reapply())
   expect(result.current.persistence.conflict).toBe(false)
-  expect(result.current.editor.customerId).toBe('remote-customer')
+  expect(result.current.editor.fields.value(allFields(result.current.editor)[0]).value).toBe('Remote GmbH')
   expect(result.current.editor.fields.value(requirements).value).toBe('3.2')
-  testing.act(() => result.current.persistence.save())
+  await testing.act(async () => { await result.current.persistence.save() })
   await testing.waitFor(() => expect(result.current.persistence.dirty).toBe(false))
   expect(submissions.map((submission) => submission.revision)).toEqual([0, 1])
   expect(remote.fields?.customer.value).toBe('Remote GmbH')
@@ -160,7 +151,7 @@ test('the mounted review keeps field, citation and document navigation in sync',
   expect(result.current.editor.fields.view(requirements).selected).toBe(false)
 })
 
-test.each([false, true])('field navigation respects reduced motion (%s) and preserves keyboard focus', (reducedMotion) => {
+test.each([false, true])('field navigation respects reduced motion (%s) and preserves keyboard focus', async (reducedMotion) => {
   const { result } = setup()
   const nativeMatchMedia = window.matchMedia
   const input = document.createElement('input')
@@ -175,7 +166,7 @@ test.each([false, true])('field navigation respects reduced motion (%s) and pres
   }
   try {
     testing.act(() => result.current.source.navigation.selectHighlight(result.current.source.highlights[0]))
-    expect(scrolls).toEqual([{ block: 'center', behavior: reducedMotion ? 'instant' : 'smooth' }])
+    await testing.waitFor(() => expect(scrolls).toEqual([{ block: 'center', behavior: reducedMotion ? 'instant' : 'smooth' }]))
     expect(document.activeElement).toBe(input)
   } finally {
     input.remove()
@@ -279,35 +270,29 @@ test('confirming all includes hidden fields, preserves corrections and assignmen
   testing.act(() => result.current.editor.fields.view(requirements).onConfirm())
   expect(result.current.editor.openCount).toBe(1)
   expect(result.current.editor.fields.value(requirements).confirmed).toBe(false)
-  testing.act(() => result.current.persistence.save())
+  await testing.act(async () => { await result.current.persistence.save() })
   await testing.waitFor(() => expect(result.current.persistence.dirty).toBe(false))
   expect(remote.fields?.requirements).toEqual({ value: '3.2', confirmed: false })
   expect(remote.fields?.['item-0-article'].confirmed).toBe(true)
 })
 
-test('inline assignments are available before checking fields, and completion confirms and saves once', async () => {
+test('field review completion confirms and saves once without master-data assignments', async () => {
   const { result } = setup(withArticle)
   expect(result.current.editor.openCount).toBeGreaterThan(0)
-  testing.act(() => result.current.editor.selectCustomer('customer'))
-  testing.act(() => result.current.editor.selectArticle('item-0-article', 'variant'))
+  expect(result.current.editor.matchingAvailable).toBe(false)
   expect(result.current.persistence.assignmentsComplete).toBe(true)
   testing.act(() => { result.current.persistence.complete(); result.current.persistence.complete() })
   await testing.waitFor(() => expect(result.current.persistence.dirty).toBe(false))
   expect(submissions).toHaveLength(1)
-  expect(submissions[0].customer_id).toBe('customer')
-  expect(submissions[0].article_ids).toEqual({ 'item-0-article': 'variant' })
+  expect(Object.keys(submissions[0]).sort()).toEqual(['fields', 'revision'])
   expect(Object.values(submissions[0].fields!).every((field) => field.confirmed)).toBe(true)
-  expect(submissions[0].position_confirmations?.['item-0-article'].origin).toBe('manual')
+  expect(result.current.persistence.completed).toBe(true)
   expect(result.current.editor.openCount).toBe(0)
   expect(result.current.editor.unconfirmedPositions).toBe(0)
 })
 
-test('completion requires assignments and remains blocked on concurrent changes', async () => {
+test('completion remains blocked on concurrent changes', async () => {
   const { result } = setup(withArticle)
-  testing.act(() => result.current.persistence.complete())
-  expect(submissions).toHaveLength(0)
-  testing.act(() => result.current.editor.selectCustomer('customer'))
-  testing.act(() => result.current.editor.selectArticle('item-0-article', 'variant'))
   remote = { ...remote, revision: 1 }
   testing.act(() => result.current.persistence.complete())
   await testing.waitFor(() => expect(result.current.persistence.conflict).toBe(true))
@@ -336,7 +321,7 @@ test('position edits keep assignments, suggestions and confirmations scoped toge
   const keys = items.map((_, index) => `item-${index}-article`)
   const initial: AnalysisResponse = {
     ...withArticle,
-    extraction: { ...withArticle.extraction!, items, matching: { targets: keys.map((field_id) => ({
+    extraction: { ...withArticle.extraction!, review_mode: undefined, items, matching: { targets: keys.map((field_id) => ({
       field_id, candidates: [{ id: field_id, number: field_id, label: 'Rohr', status: 'matching' }],
     })) } },
     review: { revision: 1, customer_id: 'customer', article_ids: Object.fromEntries(keys.map((key) => [key, key])),

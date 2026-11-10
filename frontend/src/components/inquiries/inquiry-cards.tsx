@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import { Link } from '@tanstack/react-router'
 import { ArrowUpRight, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -7,6 +8,7 @@ import { InquiryReviewStatus, InquiryScore } from './inquiry-overview-badges'
 import { InquiryDeliveryDate, InquiryEmail, InquiryReceivedAt } from './inquiry-overview-fields'
 
 export function InquiryCards({ inquiries, deletion, disabled }: { inquiries: InboxInquiry[]; deletion: DeleteInquiryController; disabled: boolean }) {
+  const { t } = useTranslation()
   return <div className="divide-y">
     {inquiries.map((inquiry) => <article key={inquiry.id} className="bg-card px-4 py-3 transition-colors hover:bg-muted/20 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -17,17 +19,17 @@ export function InquiryCards({ inquiries, deletion, disabled }: { inquiries: Inb
         <div className="flex flex-wrap items-center justify-end gap-2">
           <InquiryScore inquiry={inquiry} compact />
           {inquiry.review_status === 'in_review' ? <InquiryReviewStatus status={inquiry.review_status} /> : null}
-          <span className="text-xs tabular-nums text-muted-foreground">Erstellt <time dateTime={inquiry.created_at}>{formatInboxDate(inquiry.created_at)}</time></span>
+          <span className="text-xs tabular-nums text-muted-foreground">{t('common.created')} <time dateTime={inquiry.created_at}>{formatInboxDate(inquiry.created_at)}</time></span>
         </div>
       </div>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
         <dl className="grid min-w-0 flex-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-2 xl:grid-cols-4 [&>div]:min-w-0 [&_dd]:m-0 [&_dd]:text-left [&_dt]:mb-0.5 [&_dt]:text-left [&_dt]:text-xs [&_dt]:font-medium [&_dt]:text-muted-foreground">
-          <div><dt>E-Mail</dt><dd><InquiryEmail value={inquiry.email} /></dd></div>
-          <div><dt>E-Mail-Eingang</dt><dd><InquiryReceivedAt inquiry={inquiry} /></dd></div>
-          <div><dt>Referenz</dt><dd className="wrap-anywhere">{inquiry.reference_number || '—'}</dd></div>
-          {inquiry.deliveryDate ? <div><dt>Liefertermin</dt><dd><InquiryDeliveryDate value={inquiry.deliveryDate} /></dd></div> : null}
+          <div><dt>{t('source.email')}</dt><dd><InquiryEmail value={inquiry.email} /></dd></div>
+          <div><dt>{t('inquiries.emailReceivedAt')}</dt><dd><InquiryReceivedAt inquiry={inquiry} /></dd></div>
+          <div><dt>{t('inquiries.reference')}</dt><dd className="wrap-anywhere">{inquiry.reference_number || '—'}</dd></div>
+          {inquiry.deliveryDate ? <div><dt>{t('fields.delivery_date')}</dt><dd><InquiryDeliveryDate value={inquiry.deliveryDate} /></dd></div> : null}
         </dl>
-        <Button variant="ghost" size="sm" disabled={disabled || deletion.isPending} aria-label={`Anfrage von ${inquiry.title} löschen`} onClick={(event) => deletion.selectInquiry(inquiry, event.currentTarget)}>Löschen</Button>
+        <Button variant="ghost" size="sm" disabled={disabled || deletion.isPending} aria-label={t('inquiries.deleteLabel', { title: inquiry.title })} onClick={(event) => deletion.selectInquiry(inquiry, event.currentTarget)}>{t('common.delete')}</Button>
       </div>
     </article>)}
   </div>

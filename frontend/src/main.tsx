@@ -1,11 +1,20 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import './i18n'
+import i18n from './i18n'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from './router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ApiProvider } from '@/contexts/api-provider'
+
+function updateDocumentLanguage(): void {
+  document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language
+  document.title = i18n.t('common.appName')
+  document.querySelector('meta[name="description"]')?.setAttribute('content', i18n.t('common.appDescription'))
+}
+
+updateDocumentLanguage()
+i18n.on('languageChanged', updateDocumentLanguage)
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 3000 } },

@@ -16,7 +16,7 @@ export function ReviewSaveBar({ review }: { review: ReviewPersistence }) {
       </div>
     </div>
     {!review.assignmentsComplete ? <p className="mt-1 text-xs text-muted-foreground">{t('review.assignmentHint')}</p> : null}
-    {review.error && !review.conflict ? <div role="alert" className="mt-2 space-y-2 text-sm text-destructive"><p>{t('review.saveError', { error: review.error })}</p><Button size="sm" variant="outline" disabled={review.saving} onClick={() => { void review.save().catch(() => undefined) }}>Erneut versuchen</Button></div> : null}
+    {review.error && !review.conflict ? <div role="alert" className="mt-2 space-y-2 text-sm text-destructive"><p>{t('review.saveError', { error: review.error })}</p><Button size="sm" variant="outline" disabled={review.saving} onClick={() => { void review.save().catch(() => undefined) }}>{t('navigation.retry')}</Button></div> : null}
     {review.conflict ? <div role="alert" className="mt-3 space-y-2 border-t pt-3 text-sm"><p>{t('review.conflictHint')}</p><div className="flex flex-wrap gap-2">
       <Button variant="outline" disabled={!review.canResolveConflict} onClick={review.reload}>{t('review.reload')}</Button><Button variant="outline" disabled={!review.canResolveConflict} onClick={review.reapply}>{t('review.reapply')}</Button>
       {!review.canResolveConflict ? <Button variant="outline" disabled={review.saving} onClick={() => void review.refresh()}>{t('review.refresh')}</Button> : null}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useExtractionJobs } from './use-extraction-jobs'
-import { PAGE_SIZE } from './use-inquiries'
+import { PAGE_SIZE } from '@/lib/inquiry-overview'
 import { processingJobSummary } from '@/lib/inquiry-api'
 import type { Inquiry } from '@/lib/api'
 import { matchingFinished } from '@/lib/inquiry-processing'

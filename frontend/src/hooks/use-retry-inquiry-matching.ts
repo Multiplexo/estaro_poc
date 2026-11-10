@@ -1,3 +1,4 @@
+import { useTranslation } from '@/i18n'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useApi } from './use-api'
 import { useInquiryProcessing } from './use-inquiry-processing'
@@ -5,12 +6,13 @@ import { retryInquiryMatching } from '@/lib/inquiry-processing'
 import { extractionJobsKey, saveExtractions, type TrackedExtraction } from '@/lib/extraction-jobs'
 
 export function useRetryInquiryMatching(inquiryId: string) {
+  const { t } = useTranslation()
   const api = useApi()
   const client = useQueryClient()
   const { job, matching } = useInquiryProcessing(inquiryId, { poll: false })
   const retry = useMutation({
     mutationFn: () => {
-      if (!job.data || job.data.status !== 'succeeded') throw new Error('Für diese Anfrage liegt keine abgeschlossene Extraktion vor.')
+      if (!job.data || job.data.status !== 'succeeded') throw new Error(t('matching.noCompletedExtraction'))
       return retryInquiryMatching(api, job.data.id)
     },
     onSuccess: async (result) => {

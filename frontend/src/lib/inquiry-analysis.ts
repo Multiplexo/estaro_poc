@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 import i18n from '../i18n'
 import type { ExtractionResult, SourceReference, VerifiedField, VerifiedItem } from './inquiry-models'
 
@@ -56,9 +57,9 @@ export function analysisFields(result: AnalysisResult): AnalysisField[] {
   ]
 }
 
-export function fieldHighlights(fields: AnalysisField[]): Highlight[] {
+export function fieldHighlights(fields: AnalysisField[], t: TFunction = i18n.t): Highlight[] {
   return fields.flatMap(({ id, kind, field }) => (field.sources ?? []).map((source, index) => ({
-    id: `${id}-source-${index}`, fieldId: id, label: i18n.t(fieldStyles[kind].labelKey), color: fieldStyles[kind].color, source,
+    id: `${id}-source-${index}`, fieldId: id, label: t(fieldStyles[kind].labelKey), color: fieldStyles[kind].color, source,
   })))
 }
 

@@ -14,15 +14,15 @@ beforeAll(() => {
     port: 0,
     async fetch(request) {
       const url = new URL(request.url)
-      if (url.pathname === '/api/requests/uploads') {
+      if (url.pathname === '/api/extractions') {
         const form = await request.formData()
-        uploads = await Promise.all(form.getAll('files').map(async (value) => {
+        uploads.push(...await Promise.all(form.getAll('file').map(async (value) => {
           const file = value as File
           return { name: file.name, text: await file.text() }
-        }))
+        })))
         return Response.json({ id: 'inquiry-1' }, { status: 201 })
       }
-      if (url.pathname === '/api/requests/inquiry-1/documents/document-1') {
+      if (url.pathname === '/api/inquiries/inquiry-1/documents/document-1') {
         return new Response('%PDF-example', { headers: { 'Content-Type': 'application/pdf' } })
       }
       if (url.pathname.includes('/missing')) {
@@ -34,9 +34,10 @@ beforeAll(() => {
       if (url.pathname.endsWith('/server-error')) {
         return new Response('Service unavailable', { status: 503 })
       }
-      if (['/api/requests', '/api/articles', '/api/customers'].includes(url.pathname)) {
+      if (['/api/inquiries', '/api/articles', '/api/customers'].includes(url.pathname)) {
         expect(url.searchParams.get('limit')).toBe('25')
-        return Response.json({ items: [], total: Number(url.searchParams.get('offset')) })
+        expect(url.searchParams.get('offset')).toBe('50')
+        return Response.json([])
       }
       return new Response('Unknown endpoint', { status: 404 })
     },
@@ -55,21 +56,24 @@ function client() {
 test('generated lists and table resources send pagination through the API base URL', async () => {
   const api = client()
   const query = { limit: 25, offset: 50 }
-  const inquiries = await api.requests.listInquiriesRequestsGet(query)
+  const inquiries = await api.inquiries.listInquiries(query)
   const articles = await articlesResource.load(api, query, {})
   const customers = await customersResource.load(api, query, {})
 
-  expect(inquiries.data).toEqual({ items: [], total: 50 })
-  expect(articles.data).toEqual({ items: [], total: 50 })
-  expect(customers.data).toEqual({ items: [], total: 50 })
+  expect(inquiries.data).toEqual([])
+  expect(articles.data).toEqual([])
+  expect(customers.data).toEqual([])
 })
 
-test('multipart uploads preserve both file names and contents in repeated files fields', async () => {
+test('extraction uploads preserve file names and contents in the file field', async () => {
+  uploads = []
   const api = client()
-  await api.requests.uploadInquiryRequestsUploadsPost({ files: [
+  for (const file of [
     new File(['%PDF-example'], 'anfrage.pdf', { type: 'application/pdf' }),
     new File(['message-example'], 'anfrage.msg', { type: 'application/vnd.ms-outlook' }),
-  ] })
+  ]) {
+    await api.extractions.extraction({ file })
+  }
 
   expect(uploads).toEqual([
     { name: 'anfrage.pdf', text: '%PDF-example' },
@@ -78,7 +82,7 @@ test('multipart uploads preserve both file names and contents in repeated files 
 })
 
 test('document downloads preserve binary response data', async () => {
-  const response = await client().requests.downloadDocumentRequestsInquiryIdDocumentsDocumentIdGet(
+  const response = await client().inquiries.downloadInquiryDocument(
     'inquiry-1', 'document-1', { format: 'blob' },
   )
 
@@ -88,29 +92,29 @@ test('document downloads preserve binary response data', async () => {
 
 test('JSON and download errors preserve the backend detail message', async () => {
   const api = client()
-  await expect(api.requests.getInquiryRequestsInquiryIdGet('missing')).rejects.toThrow('Dokument nicht gefunden.')
-  await expect(api.requests.downloadDocumentRequestsInquiryIdDocumentsDocumentIdGet(
+  await expect(api.inquiries.getInquiryById('missing')).rejects.toThrow('Dokument nicht gefunden.')
+  await expect(api.inquiries.downloadInquiryDocument(
     'missing', 'document-1', { format: 'blob' },
   )).rejects.toThrow('Dokument nicht gefunden.')
 })
 
 test('validation and non-JSON failures have readable HTTP error messages', async () => {
   const api = client()
-  await expect(api.requests.getInquiryRequestsInquiryIdGet('validation-error')).rejects.toThrow('Anfrage fehlgeschlagen (HTTP 422).')
-  await expect(api.requests.getInquiryRequestsInquiryIdGet('server-error')).rejects.toThrow('Anfrage fehlgeschlagen (HTTP 503).')
+  await expect(api.inquiries.getInquiryById('validation-error')).rejects.toThrow('Anfrage fehlgeschlagen (HTTP 422).')
+  await expect(api.inquiries.getInquiryById('server-error')).rejects.toThrow('Anfrage fehlgeschlagen (HTTP 503).')
 })
 
 test('network errors have a readable connection error message', async () => {
   const api = client()
   api.instance.defaults.env = { fetch: () => Promise.reject(new TypeError('Failed to fetch')) }
-  await expect(api.requests.listInquiriesRequestsGet()).rejects.toThrow('Das Backend ist nicht erreichbar. Bitte erneut versuchen.')
+  await expect(api.inquiries.listInquiries()).rejects.toThrow('Das Backend ist nicht erreichbar. Bitte erneut versuchen.')
 })
 
 test('query cancellation remains a cancellation error', async () => {
   const controller = new AbortController()
   controller.abort()
   try {
-    await client().requests.listInquiriesRequestsGet({}, { signal: controller.signal })
+    await client().inquiries.listInquiries({}, { signal: controller.signal })
     throw new Error('Expected request cancellation')
   } catch (error) {
     expect(isCancel(error)).toBe(true)
