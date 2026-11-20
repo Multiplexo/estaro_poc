@@ -8,7 +8,7 @@ RUN bun install --frozen-lockfile
 COPY frontend/ ./
 RUN bun run build
 
-FROM minio/minio:RELEASE.2025-04-22T22-12-26Z AS minio
+FROM cgr.dev/chainguard/minio:latest-dev@sha256:3117ce7ad401284dbf57a1a5e1b8abe3984630bb51e4341d69754599977f3dae AS minio
 
 FROM ghcr.io/astral-sh/uv:0.13.6 AS uv
 
