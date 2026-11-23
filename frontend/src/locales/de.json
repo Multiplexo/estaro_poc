@@ -747,5 +747,33 @@
       "inquiry": "Anfragedaten",
       "position": "Positionen"
     }
+  },
+  "feedback": {
+    "open": "Feedback geben",
+    "title": "Feedback geben",
+    "description": "Was passt nicht oder was wünschen Sie sich? Ihr Feedback hilft, das System zu verbessern.",
+    "kind": "Art",
+    "kinds": {
+      "domain": "Fachlicher Hinweis",
+      "change": "Änderungswunsch",
+      "bug": "Fehler"
+    },
+    "message": "Nachricht",
+    "placeholders": {
+      "domain": "z. B. Bei Anfragen nach 1.4401 bieten wir immer 1.4404 an, weil …",
+      "change": "z. B. Ich brauche ein Feld für Normen unter Besonderheiten …",
+      "bug": "Was haben Sie gemacht, was ist passiert, was hätten Sie erwartet?"
+    },
+    "inquiryContext": "Die geöffnete Anfrage wird mit dem Feedback verknüpft.",
+    "send": "Senden",
+    "sending": "Wird gesendet …",
+    "thanks": "Danke! Ihr Feedback wurde gespeichert.",
+    "listTitle": "Feedback",
+    "listDescription": "Rückmeldungen der Mitarbeiter, neueste zuerst.",
+    "empty": "Noch kein Feedback.",
+    "date": "Datum",
+    "from": "Von",
+    "toInquiry": "zur Anfrage",
+    "forwarded": "an Ticketsystem übergeben"
   }
 }

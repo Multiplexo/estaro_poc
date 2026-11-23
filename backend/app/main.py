@@ -17,6 +17,7 @@ from app.persistence.jobs.matching.memory_repository import matching_memory
 from app.routes.articles import router as articles_router
 from app.routes.customers import router as customers_router
 from app.routes.extractions import router as extractions_router
+from app.routes.feedback import router as feedback_router
 from app.routes.inquiries import router as inquiries_router
 from app.routes.matching import router as matching_router
 from app.routes.metrics import router as metrics_router
@@ -84,6 +85,9 @@ app.include_router(
 )
 app.include_router(
     matching_router, prefix="/extractions", tags=["matching"], dependencies=signed_in
+)
+app.include_router(
+    feedback_router, prefix="/feedback", tags=["feedback"], dependencies=signed_in
 )
 app.include_router(
     metrics_router, prefix="/metrics", tags=["metrics"], dependencies=signed_in

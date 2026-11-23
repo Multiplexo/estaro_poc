@@ -10,7 +10,7 @@ export function UserMenu() {
   if (!user) return null
 
   return (
-    <div className="mt-auto flex items-center gap-3 border-t border-sidebar-border px-3 pt-4 text-sm">
+    <div className="flex items-center gap-3 border-t border-sidebar-border px-3 pt-4 text-sm">
       <UserRound aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{user.name}</p>

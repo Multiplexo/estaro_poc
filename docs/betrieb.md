@@ -40,6 +40,7 @@ docker compose -f compose.production.yaml run --rm -v "$PWD/Bezeichnungen.xlsx:/
 | `WORKER_MEMORY_LIMIT` | `4g` | Speicherlimit des Extraktions-Workers |
 | `BACKUP_INTERVAL_SECONDS` | `86400` | Abstand zwischen zwei Sicherungen |
 | `BACKUP_RETENTION_DAYS` | `14` | Aufbewahrung der Sicherungen auf dem Server |
+| `FEEDBACK_WEBHOOK_URL` | leer | Feedback zusätzlich als JSON an ein Ticketsystem senden (Feld `text` für Slack/Teams, `feedback` mit allen Angaben) |
 
 ## Datensicherung
 

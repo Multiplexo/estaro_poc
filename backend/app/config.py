@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     # JSON mapping for the Sage import file; empty uses app/exports/sage_default.json.
     SAGE_EXPORT_MAPPING: str = ""
 
+    # Feedback is stored and, if set, posted as JSON to this webhook (ticket system).
+    FEEDBACK_WEBHOOK_URL: str = ""
+
     # Sign-in with Microsoft Entra ID. Disabled locally; every request then runs as
     # a local admin user.
     AUTH_ENABLED: bool = False

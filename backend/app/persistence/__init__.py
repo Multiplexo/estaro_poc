@@ -2,6 +2,7 @@
 
 from app.persistence.domain.articles import Article
 from app.persistence.domain.customers import Customer
+from app.persistence.domain.feedback.schema.feedback import Feedback
 from app.persistence.domain.inquiries import (
     Inquiry,
     InquiryDocument,
@@ -19,6 +20,7 @@ __all__ = [
     "ArticleTerm",
     "Customer",
     "ExtractionJob",
+    "Feedback",
     "Inquiry",
     "InquiryDocument",
     "InquiryExtraction",
