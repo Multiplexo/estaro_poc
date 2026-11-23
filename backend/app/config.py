@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     MASTERDATA_SYNC_HOUR_UTC: int = Field(default=2, ge=0, le=23)
     MASTERDATA_DEACTIVATE_MISSING: bool = True
 
+    # JSON mapping for the Sage import file; empty uses app/exports/sage_default.json.
+    SAGE_EXPORT_MAPPING: str = ""
+
     # Sign-in with Microsoft Entra ID. Disabled locally; every request then runs as
     # a local admin user.
     AUTH_ENABLED: bool = False

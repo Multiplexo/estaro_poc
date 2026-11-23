@@ -2,11 +2,12 @@ import { useTranslation } from '@/i18n'
 import { useRef } from 'react'
 import { Menu } from '@base-ui/react/menu'
 import { useNavigate } from '@tanstack/react-router'
-import { EllipsisIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
+import { DownloadIcon, EllipsisIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useDeleteInquiry } from '@/hooks/use-delete-inquiry'
 import { useReprocessInquiry } from '@/hooks/use-reprocess-inquiry'
 import { useRetryInquiryMatching } from '@/hooks/use-retry-inquiry-matching'
+import { useSageExport } from '@/hooks/use-sage-export'
 import type { Inquiry } from '@/lib/api'
 import { DeleteInquiryDialog } from './delete-inquiry-dialog'
 import { InquiryErrorIndicator } from './inquiry-error-indicator'
@@ -19,8 +20,10 @@ export function InquiryDetailActions({ inquiry }: { inquiry: Inquiry }) {
   // The detail page already polls these shared queries through useInquiryAnalysis.
   const reprocess = useReprocessInquiry(inquiry.id, { poll: false })
   const matching = useRetryInquiryMatching(inquiry.id)
+  const sageExport = useSageExport(inquiry.id)
   const warnings = [
     reprocess.error,
+    sageExport.error?.message,
     matching.retry.error?.message,
     matching.failed ? t('matching.retryHint') : null,
   ].filter(Boolean).join('\n\n')
@@ -42,6 +45,10 @@ export function InquiryDetailActions({ inquiry }: { inquiry: Inquiry }) {
               <RefreshCwIcon aria-hidden="true" className={`size-4 shrink-0 ${matching.retry.isPending ? 'motion-safe:animate-spin' : ''}`} />
               <span>{matching.retry.isPending ? t('matching.starting') : t('matching.restart')}</span>
             </Menu.Item> : null}
+            <Menu.Item disabled={sageExport.isPending || reprocess.busy || deletion.isPending} onClick={() => sageExport.mutate()} className="flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 py-2 outline-none data-highlighted:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50">
+              <DownloadIcon aria-hidden="true" className="size-4 shrink-0" />
+              <span>{sageExport.isPending ? t('export.running') : t('export.sage')}</span>
+            </Menu.Item>
             <Menu.Separator className="my-1 h-px bg-border" />
             <Menu.Item disabled={deletion.isPending} onClick={() => deletion.selectInquiry(inquiry, menuTriggerRef.current ?? undefined)} className="flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 py-2 text-destructive outline-none data-highlighted:bg-destructive/10 data-disabled:pointer-events-none data-disabled:opacity-50">
               <Trash2Icon aria-hidden="true" className="size-4 shrink-0" />

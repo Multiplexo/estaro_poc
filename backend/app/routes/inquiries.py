@@ -2,9 +2,10 @@ from typing import Annotated
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 
+from app.config import SettingsDep
 from app.dependencies import (
     get_document_service,
     get_extraction_service,
@@ -24,6 +25,7 @@ from app.models.shared.pagination import Pagination
 from app.persistence.domain.inquiries.inquiry_repository import InquiryRepository
 from app.services.domain.documents import InquiryDocumentService
 from app.services.domain.inquiries import InquiryService
+from app.services.domain.sage_export import ExportNotReadyError, export_inquiry
 from app.services.jobs.extractions import ExtractionService
 
 router = APIRouter()
@@ -141,5 +143,37 @@ async def download_inquiry_document(
         headers={
             "Content-Disposition": f"inline; filename*=UTF-8''{quote(document.filename, safe='')}",
             "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get(
+    "/{inquiry_id}/export",
+    operation_id="export_inquiry_for_sage",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"text/csv": {"schema": {"type": "string", "format": "binary"}}}
+        },
+        409: {"description": "Customer or article numbers are missing"},
+    },
+)
+async def export_inquiry_for_sage(
+    inquiry_id: UUID, service: ServiceDep, settings: SettingsDep
+) -> Response:
+    """Create the Sage import file for a reviewed inquiry."""
+    inquiry = await service.get(inquiry_id)
+    try:
+        export = export_inquiry(
+            inquiry.daten, str(inquiry.id)[:8], settings.SAGE_EXPORT_MAPPING or None
+        )
+    except ExportNotReadyError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return Response(
+        content=export.content,
+        media_type=export.media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{export.filename}"',
+            "Cache-Control": "no-store",
         },
     )

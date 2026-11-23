@@ -1,0 +1,28 @@
+{
+  "_comment": "Placeholder until estaro provides the Sage import template. One row per position; adjust titles and order to the template.",
+  "format": "csv",
+  "layout": "flat",
+  "delimiter": ";",
+  "encoding": "cp1252",
+  "header_row": true,
+  "columns": [
+    {"title": "Belegart", "source": "literal:Angebot"},
+    {"title": "Kundennummer", "source": "kundeninformationen.kunde"},
+    {"title": "Name", "source": "kundeninformationen.name"},
+    {"title": "Ansprechpartner", "source": "kundeninformationen.ansprechpartner"},
+    {"title": "Ihre Belegnummer", "source": "belegdetails.ihreBelegnummer"},
+    {"title": "Beleg zu", "source": "belegdetails.belegZu"},
+    {"title": "Lieferdatum", "source": "beleginformationen.lieferdatum"},
+    {"title": "Angebot gültig bis", "source": "angebotsdetails.angebotGueltigBis"},
+    {"title": "Kopftext", "source": "kopftext"},
+    {"title": "Position", "source": "position.index"},
+    {"title": "Artikelnummer", "source": "position.artikel"},
+    {"title": "Bezeichnung", "source": "position.bezeichnung"},
+    {"title": "Bezeichnung 2", "source": "position.bezeichnung2"},
+    {"title": "Abmessung", "source": "position.dimensionstext"},
+    {"title": "Menge", "source": "position.menge"},
+    {"title": "Mengeneinheit", "source": "position.mengeneinheit"},
+    {"title": "Artikeltext", "source": "position.langtext"},
+    {"title": "Zeugnis", "source": "position.zeugnis"}
+  ]
+}

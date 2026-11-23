@@ -713,5 +713,9 @@
     "roleUser": "Bearbeiter",
     "logout": "Abmelden",
     "adminOnly": "Nur Administratoren können das Postfach verbinden oder trennen."
+  },
+  "export": {
+    "sage": "Für Sage exportieren",
+    "running": "Export wird erstellt …"
   }
 }
