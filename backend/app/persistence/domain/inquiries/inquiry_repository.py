@@ -23,6 +23,7 @@ from app.models.domain.inquiries import (
     InquiryOverviewQuery,
 )
 from app.models.domain.inquiry_data import InquiryData
+from app.models.domain.pilot_metrics import ReviewedInquiry
 from app.models.jobs.extraction import (
     CUSTOMER_FIELD_NAMES,
     INQUIRY_FIELD_NAMES,
@@ -304,6 +305,38 @@ class InquiryRepository:
         except SQLAlchemyError:
             logger.exception("inquiry_document_list_failed", inquiry_id=str(inquiry_id))
             raise
+
+    async def list_reviewed(self) -> list[ReviewedInquiry]:
+        """Latest reviewed extraction of every inquiry that is not being deleted."""
+        statement = (
+            select(ExtractionSchema, InquirySchema)
+            .join(InquirySchema, col(InquirySchema.id) == ExtractionSchema.inquiry_id)
+            .where(
+                col(InquirySchema.deletion_requested_at).is_(None),
+                ExtractionSchema.review["revision"].as_integer() > 0,
+            )
+            .order_by(
+                col(ExtractionSchema.created_at).desc(),
+                col(ExtractionSchema.id).desc(),
+            )
+        )
+        try:
+            rows = (await self.session.exec(statement)).all()
+        except SQLAlchemyError:
+            logger.exception("reviewed_inquiry_list_failed")
+            raise
+        latest: dict[UUID, ReviewedInquiry] = {}
+        for extraction, inquiry in rows:
+            if extraction.inquiry_id in latest:
+                continue
+            snapshot = extraction.to_model()
+            latest[extraction.inquiry_id] = ReviewedInquiry(
+                reviewed_at=snapshot.review.updated_at or snapshot.created_at,
+                extraction=snapshot.result,
+                review=snapshot.review,
+                data=InquiryData.model_validate(inquiry.daten),
+            )
+        return list(latest.values())
 
     async def list_extractions(
         self, inquiry_id: UUID, offset: int = 0, limit: int = 100

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArtikelRouteImport } from './routes/artikel'
+import { Route as AuswertungRouteImport } from './routes/auswertung'
 import { Route as EinstellungenRouteImport } from './routes/einstellungen'
 import { Route as KundenRouteImport } from './routes/kunden'
 import { Route as RegelnRouteImport } from './routes/regeln'
@@ -26,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const ArtikelRoute = ArtikelRouteImport.update({
   id: '/artikel',
   path: '/artikel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuswertungRoute = AuswertungRouteImport.update({
+  id: '/auswertung',
+  path: '/auswertung',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EinstellungenRoute = EinstellungenRouteImport.update({
@@ -63,6 +69,7 @@ const AnfragenInquiryIdPruefungRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/artikel': typeof ArtikelRoute
+  '/auswertung': typeof AuswertungRoute
   '/einstellungen': typeof EinstellungenRoute
   '/kunden': typeof KundenRoute
   '/regeln': typeof RegelnRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/artikel': typeof ArtikelRoute
+  '/auswertung': typeof AuswertungRoute
   '/einstellungen': typeof EinstellungenRoute
   '/kunden': typeof KundenRoute
   '/regeln': typeof RegelnRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/artikel': typeof ArtikelRoute
+  '/auswertung': typeof AuswertungRoute
   '/einstellungen': typeof EinstellungenRoute
   '/kunden': typeof KundenRoute
   '/regeln': typeof RegelnRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/artikel'
+    | '/auswertung'
     | '/einstellungen'
     | '/kunden'
     | '/regeln'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/artikel'
+    | '/auswertung'
     | '/einstellungen'
     | '/kunden'
     | '/regeln'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/artikel'
+    | '/auswertung'
     | '/einstellungen'
     | '/kunden'
     | '/regeln'
@@ -127,6 +139,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArtikelRoute: typeof ArtikelRoute
+  AuswertungRoute: typeof AuswertungRoute
   EinstellungenRoute: typeof EinstellungenRoute
   KundenRoute: typeof KundenRoute
   RegelnRoute: typeof RegelnRoute
@@ -149,6 +162,13 @@ declare module '@tanstack/react-router' {
       path: '/artikel'
       fullPath: '/artikel'
       preLoaderRoute: typeof ArtikelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auswertung': {
+      id: '/auswertung'
+      path: '/auswertung'
+      fullPath: '/auswertung'
+      preLoaderRoute: typeof AuswertungRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/einstellungen': {
@@ -199,6 +219,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArtikelRoute: ArtikelRoute,
+  AuswertungRoute: AuswertungRoute,
   EinstellungenRoute: EinstellungenRoute,
   KundenRoute: KundenRoute,
   RegelnRoute: RegelnRoute,

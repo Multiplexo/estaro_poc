@@ -1,6 +1,6 @@
 import { useTranslation } from '@/i18n'
 import { Link } from '@tanstack/react-router'
-import { FolderOpen, ListChecks, Package, Settings, UsersRound } from 'lucide-react'
+import { ChartColumn, FolderOpen, ListChecks, Package, Settings, UsersRound } from 'lucide-react'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -15,6 +15,7 @@ const managementLinks = [
   { titleKey: 'navigation.customers', to: '/kunden', icon: UsersRound },
   { titleKey: 'navigation.articles', to: '/artikel', icon: Package },
   { titleKey: 'navigation.rules', to: '/regeln', icon: ListChecks },
+  { titleKey: 'navigation.metrics', to: '/auswertung', icon: ChartColumn },
   { titleKey: 'navigation.settings', to: '/einstellungen', icon: Settings },
 ] as const
 

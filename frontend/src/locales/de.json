@@ -67,7 +67,8 @@
     "title": "Navigation",
     "description": "Hauptnavigation und die zehn neuesten Anfragen.",
     "breadcrumbs": "Brotkrümelnavigation",
-    "workspace": "Arbeitsbereich"
+    "workspace": "Arbeitsbereich",
+    "metrics": "Auswertung"
   },
   "fields": {
     "customer": "Kunde",
@@ -717,5 +718,34 @@
   "export": {
     "sage": "Für Sage exportieren",
     "running": "Export wird erstellt …"
+  },
+  "metrics": {
+    "title": "Auswertung Pilot",
+    "description": "Kennzahlen aus allen abgeschlossenen Prüfungen. Eine Korrektur ist ein geänderter Wert der KI oder ein manuell zugeordneter Kunde oder Artikel.",
+    "empty": "Noch keine abgeschlossenen Prüfungen.",
+    "reviewed": "Geprüfte Vorgänge",
+    "withoutCorrection": "Ohne Korrektur",
+    "correctionsPerInquiry": "Korrekturen je Vorgang",
+    "articlesAutomatic": "Artikel automatisch richtig",
+    "articlesReassigned_one": "{{count}} Position manuell zugeordnet",
+    "articlesReassigned_other": "{{count}} Positionen manuell zugeordnet",
+    "customersAutomatic": "Kunde automatisch richtig",
+    "customersReassigned_one": "{{count}} Kunde manuell zugeordnet",
+    "customersReassigned_other": "{{count}} Kunden manuell zugeordnet",
+    "weeklyTitle": "Verlauf pro Woche",
+    "weeklyDescription": "Zeigt, ob die Ergebnisse mit wachsendem Feedback besser werden.",
+    "week": "Kalenderwoche",
+    "fieldsTitle": "Korrekturen nach Angabe",
+    "fieldsDescription": "Welche Angaben am häufigsten korrigiert werden müssen.",
+    "noFieldCorrections": "Keine Angaben korrigiert.",
+    "group": "Bereich",
+    "field": "Angabe",
+    "corrections": "Korrekturen",
+    "rate": "Anteil",
+    "groups": {
+      "customer": "Kunde & Kontakt",
+      "inquiry": "Anfragedaten",
+      "position": "Positionen"
+    }
   }
 }

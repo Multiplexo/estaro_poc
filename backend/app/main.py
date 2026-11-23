@@ -19,6 +19,7 @@ from app.routes.customers import router as customers_router
 from app.routes.extractions import router as extractions_router
 from app.routes.inquiries import router as inquiries_router
 from app.routes.matching import router as matching_router
+from app.routes.metrics import router as metrics_router
 from app.routes.outlook import router as outlook_router
 from app.routes.rules import router as rules_router
 from app.routes.session import router as session_router
@@ -83,6 +84,9 @@ app.include_router(
 )
 app.include_router(
     matching_router, prefix="/extractions", tags=["matching"], dependencies=signed_in
+)
+app.include_router(
+    metrics_router, prefix="/metrics", tags=["metrics"], dependencies=signed_in
 )
 app.include_router(
     rules_router, prefix="/rules", tags=["rules"], dependencies=signed_in
