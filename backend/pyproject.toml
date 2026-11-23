@@ -51,6 +51,7 @@ dependencies = [
     # Pulled in by docling; listed directly so Linux builds use CPU-only wheels.
     "torch>=2.15",
     "torchvision>=0.29",
+    "pymssql>=2.3",
 ]
 
 [tool.uv]

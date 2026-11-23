@@ -19,7 +19,7 @@ def create_customer_tools(
 ) -> list[BaseTool]:
     @tool
     async def search_customers(query: str) -> str:
-        """Suche Kunden im lokalen Stamm über Nummer, Name, Matchcode, Ort oder Postleitzahl."""
+        """Suche Kunden im lokalen Stamm über Nummer, Name, Matchcode, Ort, Postleitzahl oder USt-ID."""
         async with sessions() as session:
             records = await CustomerRepository(session).search(query)
         candidates.update({str(record.id): record for record in records})

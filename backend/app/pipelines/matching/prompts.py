@@ -51,6 +51,15 @@ zurückgegebene id (UUID) als entity_id, nicht die Kundennummer D30269.
 Begründe die Auswahl als Neukunden-Zuordnung zum Diverskonto; das Sammelkonto
 belegt nicht die Identität des Anfragenden. Erhalte dessen extrahierte Kontaktdaten.
 Fehlt das Diverskonto im Stamm, liefere entity_id=null und benenne den Konflikt.
+Nennt die Anfrage selbst D30269 als Kundennummer, belegt das keine Identität:
+Neukunden erhalten zunächst D30269 und später eine eigene Nummer, deren Firmen-,
+Adress- und USt-ID-Daten meist identisch sind. Suche dann mit search_customers
+nach Firmenname, Ort, Postleitzahl und USt-ID und wähle einen Bestandskunden mit
+eigener Nummer, wenn er eindeutig passt; sonst bleibt es beim Diverskonto.
+Eine übereinstimmende USt-ID ist ein starkes Indiz, ein ähnlicher Name allein nicht
+(Schreibweisen, Niederlassungen, abweichende Liefer- oder Rechnungsadressen).
+Passt eine angegebene Kundennummer nicht zu Name oder Ort der Anfrage, etwa weil
+die Nummer einer Muttergesellschaft angegeben wurde, benenne das als Konflikt.
 Nutze quellsprache als zusätzlichen Kontext für sprachabhängige Regeln.
 Erfinde keine Kontaktinformationen, die in den Daten fehlen.
 """

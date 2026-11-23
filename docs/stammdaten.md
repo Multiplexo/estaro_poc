@@ -63,11 +63,19 @@ Erwartete Spalten von `estaro_kunden`:
 Werte dürfen als Text im Format des CSV-Exports kommen (`Ja`/`Nein`, `16,33`,
 `31.12.2024`) oder als passende Datenbanktypen (Bit/Boolean, Dezimalzahl, Datum).
 
-**Offen bis zur Klärung mit estaro:** Datenbanksystem und Version von Sage. Für
-Microsoft SQL Server muss noch ein Treiber ins Backend-Image (z. B. `pymssql`);
-das ist eine Zeile in `pyproject.toml`, sobald das System feststeht. Außerdem
-braucht der Worker eine Netzwerkverbindung zum Datenbankserver (bei externem
-Hosting z. B. per VPN).
+**Sage 100 (Version 9.0) bei estaro** läuft auf Microsoft SQL Server und wird bei
+Skysystems gehostet. Der Treiber `pymssql` ist im Backend enthalten; die URL hat die
+Form `mssql+pymssql://<Benutzer>:<Passwort>@<Server>:1433/<Datenbank>`.
+
+Noch zu klären mit estaro, Skysystems und ISales:
+
+- Lese-Benutzer und die zwei Views (Spaltennamen siehe oben)
+- Netzwerkweg vom Pilot-Server (Sliplane) zum SQL Server bei Skysystems, z. B.
+  Freigabe der festen IP-Adresse des Servers in der Firewall oder ein VPN;
+  Verbindung verschlüsselt
+- Falls ein direkter Zugriff nicht möglich ist: Ausweichweg über einen nächtlichen
+  CSV-Export (`MASTERDATA_SOURCE=csv`) auf einen Speicherort, den der Server lesen
+  kann
 
 ## Test
 

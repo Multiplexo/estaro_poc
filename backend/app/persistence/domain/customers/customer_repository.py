@@ -55,13 +55,27 @@ class CustomerRepository:
             CustomerSchema.name_addition,
             CustomerSchema.city,
             CustomerSchema.postal_code,
+            func.replace(CustomerSchema.vat_id, " ", ""),
         )
+        compact_query = query.replace(" ", "")
         score = func.word_similarity(query, text)
         statement = (
             select(CustomerSchema)
-            .where(or_(score > 0.15, text.icontains(query, autoescape=True)))
+            .where(
+                or_(
+                    score > 0.15,
+                    text.icontains(query, autoescape=True),
+                    text.icontains(compact_query, autoescape=True),
+                )
+            )
             .order_by(
                 (col(CustomerSchema.customer_number) == query).desc(),
+                (
+                    func.upper(func.replace(CustomerSchema.vat_id, " ", ""))
+                    == compact_query.upper()
+                )
+                .desc()
+                .nulls_last(),
                 score.desc(),
                 CustomerSchema.customer_number,
             )
