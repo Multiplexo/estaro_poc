@@ -11,6 +11,7 @@ x-backend: &backend
     CELERY_BROKER_URL: redis://redis:6379/0
     MINIO_ENDPOINT: minio:9000
     MINIO_SECURE: "false"
+    LOG_FORMAT: ${LOG_FORMAT:-json}
     MS_FRONTEND_URL: ${PUBLIC_URL:?Set PUBLIC_URL to the public origin without a trailing slash}
     MS_REDIRECT_URI: ${PUBLIC_URL:?Set PUBLIC_URL to the public origin without a trailing slash}/api/auth/callback
   depends_on:
@@ -69,6 +70,11 @@ services:
   extraction_worker:
     <<: *backend
     stop_grace_period: 5m
+    # PDF conversion peaks at ~2.2 GB per worker process (docs/pdf-konvertierung.md).
+    deploy:
+      resources:
+        limits:
+          memory: ${WORKER_MEMORY_LIMIT:-4g}
 
   deletion_scheduler:
     <<: *backend
@@ -118,7 +124,28 @@ services:
       retries: 10
       start_period: 10s
 
+  # Daily database dump and document archive into the backups volume, see docs/betrieb.md.
+  backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-estaro}
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - backups:/backups
+      - minio_data:/minio:ro
+      - ./deploy/backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+  backups:

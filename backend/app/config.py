@@ -1,7 +1,7 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
 import structlog
@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = ""
     POSTGRES_POOL_SIZE: int = 5
     POSTGRES_MAX_OVERFLOW: int = 10
+
+    # "console" for readable local output, "json" for log platforms in production.
+    LOG_FORMAT: Literal["console", "json"] = "console"
 
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     MATCHING_CONCURRENCY: int = Field(default=3, ge=1, le=10)
@@ -99,20 +102,54 @@ def get_settings() -> Settings:
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[RichHandler(rich_tracebacks=True)],
-    force=True,
-)
-structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.dev.ConsoleRenderer(colors=False),
-    ],
-    logger_factory=structlog.stdlib.LoggerFactory(),
-)
+
+def configure_logging(log_format: str) -> None:
+    if log_format == "json":
+        timestamper = structlog.processors.TimeStamper(fmt="iso", utc=True)
+        handler = logging.StreamHandler()
+        handler.setFormatter(
+            structlog.stdlib.ProcessorFormatter(
+                processors=[
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    structlog.processors.format_exc_info,
+                    structlog.processors.JSONRenderer(ensure_ascii=False),
+                ],
+                foreign_pre_chain=[
+                    structlog.stdlib.add_log_level,
+                    structlog.stdlib.add_logger_name,
+                    timestamper,
+                ],
+            )
+        )
+        logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+        structlog.configure(
+            processors=[
+                structlog.stdlib.add_log_level,
+                structlog.stdlib.add_logger_name,
+                timestamper,
+                structlog.processors.StackInfoRenderer(),
+                structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+            ],
+            logger_factory=structlog.stdlib.LoggerFactory(),
+        )
+        return
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+        handlers=[RichHandler(rich_tracebacks=True)],
+        force=True,
+    )
+    structlog.configure(
+        processors=[
+            structlog.stdlib.add_log_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.dev.ConsoleRenderer(colors=False),
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+    )
+
+
+configure_logging(get_settings().LOG_FORMAT)
 
 logger = structlog.get_logger(__name__)
