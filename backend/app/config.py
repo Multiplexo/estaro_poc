@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     MATCHING_TIMEOUT_SECONDS: int = Field(default=600, ge=1, le=3600)
     EXTRACTION_CONFIDENCE_THRESHOLD: float = Field(default=0.5, ge=0, le=1)
 
+    # PDF conversion (Docling). Not prefixed DOCLING_ because Docling reads that
+    # prefix for its own settings.
+    PDF_NUM_THREADS: int = Field(default=4, ge=1, le=64)
+    PDF_IMAGES_SCALE: float = Field(default=2.0, gt=0, le=4)
+    PDF_OCR_ENABLED: bool = True
+
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_PUBLIC_ENDPOINT: str | None = None
     MINIO_PUBLIC_SECURE: bool | None = None

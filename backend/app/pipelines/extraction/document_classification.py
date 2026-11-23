@@ -1,4 +1,6 @@
+from functools import lru_cache
 from io import BytesIO
+from threading import Lock
 
 import structlog
 from docling.datamodel.accelerator_options import AcceleratorOptions
@@ -13,6 +15,7 @@ from docling_core.transforms.serializer.doctags import (
 from docling_core.types.doc.document import DoclingDocument
 from docling_core.types.doc.items.node import DocItem
 
+from app.config import get_settings
 from app.models.domain.inquiries import InquiryDocument
 from app.models.jobs.extraction import (
     CitationBBox,
@@ -24,19 +27,34 @@ from app.services.shared.email import parse_email
 logger = structlog.get_logger(__name__)
 
 
-def _convert_document(document: bytes) -> DoclingDocument:
+_converter_lock = Lock()
+
+
+@lru_cache(maxsize=1)
+def _get_converter(
+    num_threads: int, images_scale: float, ocr_enabled: bool
+) -> DocumentConverter:
+    """Build the converter once per process; loading its models is expensive."""
     pipeline_options = PdfPipelineOptions(
-        accelerator_options=AcceleratorOptions(num_threads=16),
+        accelerator_options=AcceleratorOptions(num_threads=num_threads),
         generate_page_images=True,
-        images_scale=2.0,
+        images_scale=images_scale,
+        do_ocr=ocr_enabled,
     )
-    converter = DocumentConverter(
+    return DocumentConverter(
         allowed_formats=[InputFormat.PDF],
         format_options={
             InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
         },
     )
-    with BytesIO(document) as stream:
+
+
+def _convert_document(document: bytes) -> DoclingDocument:
+    settings = get_settings()
+    converter = _get_converter(
+        settings.PDF_NUM_THREADS, settings.PDF_IMAGES_SCALE, settings.PDF_OCR_ENABLED
+    )
+    with _converter_lock, BytesIO(document) as stream:
         result = converter.convert(DocumentStream(name="inquiry.pdf", stream=stream))
     if result.status != ConversionStatus.SUCCESS:
         raise ConversionError("PDF conversion did not complete successfully")

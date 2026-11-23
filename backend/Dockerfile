@@ -16,4 +16,5 @@ ENV HF_HUB_OFFLINE=1
 RUN useradd --create-home worker
 USER worker
 
-CMD ["/app/.venv/bin/celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=info", "--queues=extraction", "--concurrency=2"]
+# One process: each worker process loads its own PDF models (~2.2 GB peak).
+CMD ["/app/.venv/bin/celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel=info", "--queues=extraction", "--concurrency=1"]
