@@ -56,6 +56,7 @@ async def test_matching_agents_use_feedback_tools_and_preserve_source_conflicts(
         sessions,
         ai_service,
         MatchingMemoryRepository(InMemoryStore()),
+        recursion_limit=30,
     )
 
     result = await run_matching_pipeline(job, agents, concurrency=1)
@@ -93,6 +94,7 @@ async def test_matching_rejects_invalid_concurrency_before_ai_calls(
         Mock(spec=async_sessionmaker),
         ai_service,
         MatchingMemoryRepository(InMemoryStore()),
+        recursion_limit=30,
     )
     with pytest.raises(ValueError, match="Matching concurrency must be positive"):
         await run_matching_pipeline(job, agents, concurrency=0)
@@ -112,12 +114,15 @@ async def test_matching_rejects_candidates_not_retrieved_by_tools(
         Mock(spec=async_sessionmaker),
         ai_service,
         MatchingMemoryRepository(InMemoryStore()),
+        recursion_limit=30,
     )
 
-    with pytest.raises(ExceptionGroup) as failure:
-        await run_matching_pipeline(job, agents, concurrency=1)
+    result = await run_matching_pipeline(job, agents, concurrency=1)
 
-    assert len(failure.value.exceptions) == 1
-    cause = failure.value.exceptions[0]
-    assert isinstance(cause, ValueError)
-    assert "Stammdaten" in str(cause)
+    assert result.customer.selected is None
+    assert result.customer.confidence == 0
+    assert result.customer.requires_review is True
+    assert any(
+        "nicht eindeutig zuordenbar" in conflict
+        for conflict in result.customer.conflicts
+    )

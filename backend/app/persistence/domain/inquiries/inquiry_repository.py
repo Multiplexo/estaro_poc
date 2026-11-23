@@ -148,7 +148,7 @@ class InquiryRepository:
             select(InquirySchema, ExtractionSchema)
             .join(ExtractionSchema, col(ExtractionSchema.id) == latest_id)
             .join(ExtractionJob, col(ExtractionJob.id) == ExtractionSchema.job_id)
-            .join(MatchingJob, MatchingJob.extraction_job_id == ExtractionJob.id)
+            .join(MatchingJob, col(MatchingJob.extraction_job_id) == ExtractionJob.id)
             .where(
                 col(ExtractionJob.id) == latest_job_id,
                 ExtractionJob.status == ExtractionStatus.SUCCEEDED,

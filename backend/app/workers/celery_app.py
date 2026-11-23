@@ -66,7 +66,7 @@ def log_task_started(task_id: str, task: Task, **kwargs: object) -> None:
         "celery_task_started",
         task_id=task_id,
         task_name=task.name,
-        queue=task.request.delivery_info.get("routing_key"),
+        queue=(task.request.delivery_info or {}).get("routing_key"),
     )
 
 
@@ -79,7 +79,7 @@ def log_task_succeeded(task_id: str, task: Task, state: str, **kwargs: object) -
         "celery_task_succeeded",
         task_id=task_id,
         task_name=task.name,
-        queue=task.request.delivery_info.get("routing_key"),
+        queue=(task.request.delivery_info or {}).get("routing_key"),
     )
 
 

@@ -20,13 +20,16 @@ COPY --from=uv /uv /uvx /bin/
 COPY --from=minio /usr/bin/minio /usr/local/bin/minio
 
 WORKDIR /app
-ENV UV_COMPILE_BYTECODE=1 PYTHONUNBUFFERED=1 PORT=10000
+ENV UV_COMPILE_BYTECODE=1 PYTHONUNBUFFERED=1 PORT=10000 HF_HOME=/opt/hf-cache
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --locked --no-dev
 COPY backend/app ./app
 COPY backend/alembic.ini ./
 COPY backend/alembic ./alembic
 COPY backend/scripts ./scripts
+# Bake the Docling models into the image; nothing is downloaded at runtime.
+RUN .venv/bin/python -m scripts.prefetch_models
+ENV HF_HUB_OFFLINE=1
 
 COPY --from=frontend /app/dist /app/frontend
 COPY deploy/render/nginx.conf /etc/nginx/conf.d/estaro.conf
