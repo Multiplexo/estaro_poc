@@ -72,7 +72,10 @@ offene Weiterleitung). Ein Test gegen einen echten Entra-Tenant steht aus.
 
 ## Bekannte Grenzen
 
-- Download-Links für Originaldokumente sind vorsignierte MinIO-Adressen und eine
-  Stunde lang ohne Anmeldung gültig, wenn jemand den Link kennt.
+- Originaldokumente lädt die Oberfläche über die API (`GET /inquiries/{id}/documents/{id}`),
+  also nur mit gültiger Sitzung. Der Dateispeicher (MinIO) muss dafür nicht
+  öffentlich erreichbar sein. Der ältere Endpunkt `…/url` liefert weiterhin eine
+  vorsignierte, eine Stunde gültige Adresse und wird von der Oberfläche nicht mehr
+  verwendet.
 - Eine Sitzung bleibt bis zu ihrem Ablauf gültig, auch wenn der Benutzer in Entra
   deaktiviert wird; Rollenänderungen greifen bei der nächsten Anmeldung.

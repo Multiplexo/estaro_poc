@@ -32,12 +32,10 @@ export function usePdfSource(inquiryId: string, documentId: string) {
   const [pageCount, setPageCount] = useState(0)
   const query = useQuery({
     queryKey: ['pdf-source', inquiryId, documentId],
-    queryFn: async ({ signal }) => {
-      const { data } = await api.inquiries.getInquiryDocumentUrl(inquiryId, documentId, { signal })
-      return data.url
-    },
-    staleTime: 50 * 60 * 1000,
-    refetchInterval: 50 * 60 * 1000,
+    // Load through the API so the document needs a signed-in session; no
+    // pre-signed storage links that work without authentication.
+    queryFn: () => api.instance.getUri({ url: `/inquiries/${inquiryId}/documents/${documentId}` }),
+    staleTime: Infinity,
   })
   const file = useMemo(() => query.data ? { url: query.data } : null, [query.data])
   return { ...query, file, pageCount, onLoadSuccess: ({ numPages }: { numPages: number }) => setPageCount(numPages) }
