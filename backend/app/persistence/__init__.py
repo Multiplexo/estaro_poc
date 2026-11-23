@@ -10,11 +10,13 @@ from app.persistence.domain.inquiries import (
 )
 from app.persistence.domain.outlook.schema.mailbox import OutlookMailbox
 from app.persistence.domain.rules.schema.rule import Rule
+from app.persistence.domain.terms.schema.term import ArticleTerm
 from app.persistence.jobs.extractions.schema.extraction_job import ExtractionJob
 from app.persistence.jobs.matching.schema.matching_job import MatchingJob
 
 __all__ = [
     "Article",
+    "ArticleTerm",
     "Customer",
     "ExtractionJob",
     "Inquiry",

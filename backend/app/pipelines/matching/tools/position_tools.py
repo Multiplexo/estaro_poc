@@ -5,9 +5,12 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.domain.articles import Article, ArticleSearchFilters
+from app.models.domain.terms import ArticleTerm, TermMatch
 from app.models.jobs.matching import MatchFeedback
 from app.persistence.domain.articles.article_repository import ArticleRepository
+from app.persistence.domain.terms.term_repository import TermRepository
 from app.persistence.jobs.matching.memory_repository import MatchingMemoryRepository
+from app.services.domain.terms import resolve_terms as find_terms
 
 
 def create_position_tools(
@@ -50,4 +53,21 @@ def create_position_tools(
         records = await memory.search("article", query)
         return TypeAdapter(list[MatchFeedback]).dump_json(records).decode()
 
-    return [search_articles, get_article_details, get_position_feedback]
+    loaded_terms: list[ArticleTerm] | None = None
+
+    @tool
+    async def resolve_terms(text: str) -> str:
+        """Gleiche Positionstext mit der estaro-Bezeichnungsliste ab.
+
+        Liefert erkannte Artikelarten mit Matchcode-Muster, Werkstoffe als
+        vierstellige Matchcode-Nummer (ggf. mit substitute_for) und Zubehör mit
+        Artikelnummer. Übergib Bezeichnung, Werkstoff, Abmessung und Anforderungen.
+        """
+        nonlocal loaded_terms
+        if loaded_terms is None:
+            async with sessions() as session:
+                loaded_terms = await TermRepository(session).list_terms()
+        matches = find_terms(loaded_terms, text)
+        return TypeAdapter(list[TermMatch]).dump_json(matches).decode()
+
+    return [search_articles, get_article_details, get_position_feedback, resolve_terms]

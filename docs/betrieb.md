@@ -28,6 +28,8 @@ docker compose -f compose.production.yaml run --rm -v "$PWD/resources:/resources
   backend /app/.venv/bin/python -m scripts.import_data --resources /resources
 docker compose -f compose.production.yaml run --rm backend \
   /app/.venv/bin/python -m scripts.import_rules
+docker compose -f compose.production.yaml run --rm -v "$PWD/Bezeichnungen.xlsx:/terms.xlsx:ro" \
+  backend /app/.venv/bin/python -m scripts.import_terms --file /terms.xlsx
 ```
 
 ## Konfiguration für den Betrieb
