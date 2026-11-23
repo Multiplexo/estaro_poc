@@ -705,5 +705,11 @@
       "intervalSeconds_other": "{{count}} Sekunden"
     },
     "description": "Richte die Outlook-Verbindung für den automatischen E-Mail-Abruf ein."
+  },
+  "session": {
+    "roleAdmin": "Administrator",
+    "roleUser": "Bearbeiter",
+    "logout": "Abmelden",
+    "adminOnly": "Nur Administratoren können das Postfach verbinden oder trennen."
   }
 }

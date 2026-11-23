@@ -13,7 +13,7 @@ from kiota_abstractions.api_error import APIError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import Settings, SettingsDep
-from app.dependencies import SessionDep
+from app.dependencies import SessionDep, require_admin
 from app.models.domain.outlook import OutlookConnectionStatus
 from app.persistence.domain.outlook.outlook_repository import OutlookRepository
 from app.services.shared.outlook import OutlookClient, create_outlook_client
@@ -43,7 +43,9 @@ def frontend_redirect(
     return response
 
 
-@router.get("/login", operation_id="connect_outlook")
+@router.get(
+    "/login", operation_id="connect_outlook", dependencies=[Depends(require_admin)]
+)
 async def login(outlook: OutlookClientDep) -> RedirectResponse:
     verifier = token_urlsafe(64)
     try:
@@ -66,7 +68,9 @@ async def login(outlook: OutlookClientDep) -> RedirectResponse:
     return response
 
 
-@router.get("/callback", operation_id="outlook_callback")
+@router.get(
+    "/callback", operation_id="outlook_callback", dependencies=[Depends(require_admin)]
+)
 async def callback(
     outlook: OutlookClientDep,
     session: SessionDep,
@@ -125,7 +129,12 @@ async def get_outlook_connection(
     )
 
 
-@router.delete("/connection", status_code=204, operation_id="disconnect_outlook")
+@router.delete(
+    "/connection",
+    status_code=204,
+    operation_id="disconnect_outlook",
+    dependencies=[Depends(require_admin)],
+)
 async def disconnect_outlook(session: SessionDep) -> Response:
     await OutlookRepository(session).disconnect()
     logger.info("outlook_disconnected")

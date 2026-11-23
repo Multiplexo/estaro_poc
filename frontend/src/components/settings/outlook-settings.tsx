@@ -3,6 +3,7 @@ import { Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useApi } from '@/hooks/use-api'
+import { useIsAdmin } from '@/hooks/use-current-user'
 import { useDisconnectOutlook, useOutlookConnection } from '@/hooks/use-outlook-connection'
 
 export function OutlookSettings({ result }: { result?: string }) {
@@ -10,6 +11,7 @@ export function OutlookSettings({ result }: { result?: string }) {
   const api = useApi()
   const connection = useOutlookConnection()
   const disconnect = useDisconnectOutlook()
+  const isAdmin = useIsAdmin()
   const error = connectionError(result)
   const status = connection.data
 
@@ -46,13 +48,13 @@ export function OutlookSettings({ result }: { result?: string }) {
             {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
             {!status.configured ? <p className="text-sm text-muted-foreground">{t('settings.outlook.configurationError')}</p> : null}
             {!status.fetch_enabled ? <p className="text-sm text-muted-foreground">{t('settings.outlook.fetchDisabled')}</p> : null}
-            <div className="flex flex-wrap gap-3">
+            {isAdmin ? <div className="flex flex-wrap gap-3">
               <Button type="button" variant="outline" disabled={!status.configured || disconnect.isPending} onClick={() => window.location.assign(api.instance.getUri({ url: '/auth/login' }))}>
                 <MicrosoftLogo />
                 {status.connected ? t('settings.outlook.reconnect') : t('settings.outlook.connect')}
               </Button>
               {status.connected ? <Button type="button" variant="destructive" disabled={disconnect.isPending} onClick={() => disconnect.mutate()}>{disconnect.isPending ? t('settings.outlook.disconnecting') : t('settings.outlook.disconnect')}</Button> : null}
-            </div>
+            </div> : <p className="text-sm text-muted-foreground">{t('session.adminOnly')}</p>}
             {disconnect.error ? <p role="alert" className="text-sm text-destructive">{disconnect.error.message}</p> : null}
           </>
         ) : null}

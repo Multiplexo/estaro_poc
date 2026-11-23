@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { useIsAdmin } from '@/hooks/use-current-user'
 import { useDeleteRule, useRules, useSaveRule } from '@/hooks/use-rules'
 import { ruleCategoryKeys, ruleSectionLabel, type Rule, type RuleCategory } from '@/lib/rules'
 import { RuleEditorDialog } from './rule-editor-dialog'
@@ -16,6 +17,7 @@ export function RuleManager() {
   const query = useRules()
   const update = useSaveRule()
   const deletion = useDeleteRule()
+  const isAdmin = useIsAdmin()
   const [editor, setEditor] = useState<Rule | 'new' | null>(null)
   const [deleting, setDeleting] = useState<Rule | null>(null)
   const [search, setSearch] = useState('')
@@ -71,7 +73,7 @@ export function RuleManager() {
         <footer className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <p className="text-xs text-muted-foreground">{t('rules.updatedAt', { date: new Intl.DateTimeFormat(i18n.language).format(new Date(rule.updated_at)) })}</p>
           <div className="flex gap-1"><Button variant="ghost" size="sm" onClick={() => setEditor(rule)}><Pencil aria-hidden="true" />{t('common.edit')}</Button>
-            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { deletion.reset(); setDeleting(rule) }}><Trash2 aria-hidden="true" />{t('common.delete')}</Button></div>
+            {isAdmin ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { deletion.reset(); setDeleting(rule) }}><Trash2 aria-hidden="true" />{t('common.delete')}</Button> : null}</div>
         </footer>
       </article>)}</div> : <div className="rounded-xl border border-dashed p-10 text-center"><h2 className="font-medium">{rules.length ? t('rules.noResults') : t('rules.empty')}</h2><p className="mt-2 text-sm text-muted-foreground">{rules.length ? t('rules.adjustFilters') : t('rules.emptyHint')}</p></div>}
     </> : null}

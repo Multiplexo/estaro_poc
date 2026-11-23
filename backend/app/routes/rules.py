@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
 
-from app.dependencies import get_rule_service
+from app.dependencies import get_rule_service, require_admin
 from app.models.domain.rules import Rule, RuleCategory, RuleCreate, RuleUpdate
 from app.services.domain.rules import RuleService
 
@@ -31,7 +31,10 @@ async def update_rule(rule_id: UUID, data: RuleUpdate, service: ServiceDep) -> R
 
 
 @router.delete(
-    "/{rule_id}", status_code=status.HTTP_204_NO_CONTENT, operation_id="delete_rule"
+    "/{rule_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="delete_rule",
+    dependencies=[Depends(require_admin)],
 )
 async def delete_rule(rule_id: UUID, service: ServiceDep) -> Response:
     await service.delete(rule_id)

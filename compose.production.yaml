@@ -12,6 +12,8 @@ x-backend: &backend
     MINIO_ENDPOINT: minio:9000
     MINIO_SECURE: "false"
     LOG_FORMAT: ${LOG_FORMAT:-json}
+    AUTH_ENABLED: ${AUTH_ENABLED:-true}
+    AUTH_REDIRECT_URI: ${PUBLIC_URL:?Set PUBLIC_URL to the public origin without a trailing slash}/api/session/callback
     MS_FRONTEND_URL: ${PUBLIC_URL:?Set PUBLIC_URL to the public origin without a trailing slash}
     MS_REDIRECT_URI: ${PUBLIC_URL:?Set PUBLIC_URL to the public origin without a trailing slash}/api/auth/callback
   depends_on:

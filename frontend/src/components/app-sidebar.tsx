@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import logo from '@/assets/estaro-logo.svg'
 import { RecentInquiries } from '@/components/inquiries/recent-inquiries'
 import { SidebarNavigation } from '@/components/sidebar-navigation'
+import { UserMenu } from '@/components/user-menu'
 import { Sidebar, SidebarContent, SidebarHeader, SidebarTrigger } from '@/components/ui/sidebar'
 import { useSidebarNavigation } from '@/hooks/use-sidebar-navigation'
 
@@ -21,6 +22,7 @@ export function AppSidebar() {
       <SidebarContent className="gap-5 px-3 pt-5 pb-6">
         <SidebarNavigation />
         <RecentInquiries />
+        <UserMenu />
       </SidebarContent>
     </Sidebar>
   )

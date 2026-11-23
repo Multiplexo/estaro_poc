@@ -11,8 +11,8 @@ commands from the repository root, with Docker running.
 
    Set `POSTGRES_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, and
    `API_KEY` in `.env`, and choose a `MODEL` available to your OpenAI account.
-   Correct `MS_FETCH_ENABLED=fasle` to `MS_FETCH_ENABLED=false`. Microsoft credentials
-   are only needed for Outlook integration.
+   Microsoft credentials are only needed for Outlook integration. Sign-in stays
+   off locally (`AUTH_ENABLED=false`); see `docs/anmeldung.md` for production.
 
 2. Install backend dependencies, start the infrastructure, and apply migrations:
 

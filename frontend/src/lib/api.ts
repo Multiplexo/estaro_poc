@@ -24,10 +24,17 @@ export class ApiError extends Error {
   }
 }
 
+export function loginUrl(baseURL = '/api', path = '/'): string {
+  return `${baseURL}/session/login?redirect=${encodeURIComponent(path)}`
+}
+
 export function createApi(baseURL = '/api'): ApiClient {
   const api = new Api<unknown>({ baseURL })
   api.instance.interceptors.response.use(undefined, async (error: unknown) => {
     if (!isAxiosError(error) || isCancel(error)) throw error
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      window.location.assign(loginUrl(baseURL, window.location.pathname + window.location.search))
+    }
 
     let body: unknown = error.response?.data
     if (body instanceof Blob) {

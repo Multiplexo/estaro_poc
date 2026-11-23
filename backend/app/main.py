@@ -4,13 +4,14 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from psycopg import Error as PsycopgError
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
+from app.dependencies import get_current_user
 from app.models.api.health import RootResponse
 from app.persistence.jobs.matching.memory_repository import matching_memory
 from app.routes.articles import router as articles_router
@@ -20,6 +21,7 @@ from app.routes.inquiries import router as inquiries_router
 from app.routes.matching import router as matching_router
 from app.routes.outlook import router as outlook_router
 from app.routes.rules import router as rules_router
+from app.routes.session import router as session_router
 from app.services.shared.database import database_service
 
 logger = structlog.get_logger(__name__)
@@ -62,13 +64,32 @@ async def database_error(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": "Database unavailable"})
 
 
-app.include_router(articles_router, prefix="/articles", tags=["articles"])
-app.include_router(customers_router, prefix="/customers", tags=["customers"])
-app.include_router(inquiries_router, prefix="/inquiries", tags=["inquiries"])
-app.include_router(extractions_router, prefix="/extractions", tags=["extractions"])
-app.include_router(matching_router, prefix="/extractions", tags=["matching"])
-app.include_router(rules_router, prefix="/rules", tags=["rules"])
-app.include_router(outlook_router, prefix="/auth", tags=["outlook"])
+signed_in = [Depends(get_current_user)]
+app.include_router(session_router, prefix="/session", tags=["session"])
+app.include_router(
+    articles_router, prefix="/articles", tags=["articles"], dependencies=signed_in
+)
+app.include_router(
+    customers_router, prefix="/customers", tags=["customers"], dependencies=signed_in
+)
+app.include_router(
+    inquiries_router, prefix="/inquiries", tags=["inquiries"], dependencies=signed_in
+)
+app.include_router(
+    extractions_router,
+    prefix="/extractions",
+    tags=["extractions"],
+    dependencies=signed_in,
+)
+app.include_router(
+    matching_router, prefix="/extractions", tags=["matching"], dependencies=signed_in
+)
+app.include_router(
+    rules_router, prefix="/rules", tags=["rules"], dependencies=signed_in
+)
+app.include_router(
+    outlook_router, prefix="/auth", tags=["outlook"], dependencies=signed_in
+)
 
 
 @app.get("/", response_model=RootResponse, operation_id="get_root")

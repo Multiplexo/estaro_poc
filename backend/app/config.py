@@ -1,12 +1,12 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from urllib.parse import urlsplit
 
 import structlog
 from fastapi import Depends
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.logging import RichHandler
 
@@ -62,6 +62,19 @@ class Settings(BaseSettings):
     MS_FETCH_ENABLED: bool = False
     MS_FETCH_INTERVAL_SECONDS: int = Field(default=300, ge=1)
 
+    # Sign-in with Microsoft Entra ID. Disabled locally; every request then runs as
+    # a local admin user.
+    AUTH_ENABLED: bool = False
+    AUTH_TENANT_ID: str = ""
+    AUTH_CLIENT_ID: str = ""
+    AUTH_CLIENT_SECRET: str = ""
+    AUTH_AUTHORITY_HOST: str = "https://login.microsoftonline.com"
+    AUTH_REDIRECT_URI: str = "http://localhost:5173/api/session/callback"
+    AUTH_ADMIN_ROLE: str = "admin"
+    AUTH_USER_ROLE: str = "bearbeiter"
+    SESSION_SECRET: str = ""
+    SESSION_MAX_AGE_SECONDS: int = Field(default=8 * 3600, ge=300, le=7 * 24 * 3600)
+
     @field_validator("CORS_ORIGINS")
     @classmethod
     def validate_cors_origins(cls, value: list[str]) -> list[str]:
@@ -84,6 +97,21 @@ class Settings(BaseSettings):
         ):
             raise ValueError("Frontend URLs must be explicit HTTP or HTTPS origins")
         return value.rstrip("/")
+
+    @model_validator(mode="after")
+    def validate_auth(self) -> Self:
+        if not self.AUTH_ENABLED:
+            return self
+        missing = [
+            name
+            for name in ("AUTH_TENANT_ID", "AUTH_CLIENT_ID", "AUTH_CLIENT_SECRET")
+            if not getattr(self, name)
+        ]
+        if missing:
+            raise ValueError(f"AUTH_ENABLED requires {', '.join(missing)}")
+        if len(self.SESSION_SECRET) < 32:
+            raise ValueError("AUTH_ENABLED requires SESSION_SECRET of 32+ characters")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=(
