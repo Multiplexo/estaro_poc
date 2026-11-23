@@ -19,7 +19,9 @@ docker compose -f compose.production.yaml up -d --build
 ```
 
 Datenbank-Migrationen laufen automatisch im Dienst `migrate`, bevor API und Worker
-starten. Stammdaten und Regeln werden einmalig bzw. nach Änderungen importiert:
+starten. Regeln werden einmalig importiert; Stammdaten gleicht der Worker nachts
+automatisch ab, sobald `MASTERDATA_SOURCE` gesetzt ist (siehe
+[Stammdaten](stammdaten.md)). Manuell:
 
 ```sh
 docker compose -f compose.production.yaml run --rm -v "$PWD/resources:/resources:ro" \

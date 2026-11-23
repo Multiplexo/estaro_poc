@@ -4,6 +4,7 @@ from uuid import UUID
 
 import structlog
 from celery import Celery, Task
+from celery.schedules import crontab
 from celery.signals import task_postrun, task_prerun
 from celery.states import SUCCESS
 from fastapi.concurrency import run_in_threadpool
@@ -24,6 +25,7 @@ celery_app = Celery(
         "app.workers.matching_tasks",
         "app.workers.cleanup_tasks",
         "app.workers.outlook_tasks",
+        "app.workers.masterdata_tasks",
     ],
 )
 
@@ -48,6 +50,13 @@ celery_app.conf.update(
         }
     },
 )
+
+if get_settings().MASTERDATA_SOURCE:
+    celery_app.conf.beat_schedule["masterdata_sync"] = {
+        "task": "masterdata.sync",
+        "schedule": crontab(minute=17, hour=get_settings().MASTERDATA_SYNC_HOUR_UTC),
+        "options": {"queue": "extraction"},
+    }
 
 if get_settings().MS_FETCH_ENABLED:
     celery_app.conf.beat_schedule["outlook_fetch"] = {

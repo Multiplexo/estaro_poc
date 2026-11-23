@@ -65,6 +65,17 @@ class Settings(BaseSettings):
     MS_MAILBOX: str = ""
     MS_FETCH_INTERVAL_SECONDS: int = Field(default=300, ge=1)
 
+    # Nightly master data sync. "csv" reads Artikelstamm.csv/Kundenstamm.csv from
+    # MASTERDATA_CSV_DIR; "sql" runs the two queries, whose column aliases must
+    # match the CSV export headers. Empty disables the scheduled sync.
+    MASTERDATA_SOURCE: Literal["", "csv", "sql"] = ""
+    MASTERDATA_CSV_DIR: str = "/data/stammdaten"
+    MASTERDATA_SQL_URL: str = ""
+    MASTERDATA_ARTICLES_QUERY: str = "SELECT * FROM estaro_artikel"
+    MASTERDATA_CUSTOMERS_QUERY: str = "SELECT * FROM estaro_kunden"
+    MASTERDATA_SYNC_HOUR_UTC: int = Field(default=2, ge=0, le=23)
+    MASTERDATA_DEACTIVATE_MISSING: bool = True
+
     # Sign-in with Microsoft Entra ID. Disabled locally; every request then runs as
     # a local admin user.
     AUTH_ENABLED: bool = False
