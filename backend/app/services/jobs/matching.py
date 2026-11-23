@@ -284,7 +284,9 @@ class MatchingService:
             data = map_article_to_inquiry(data, article, match.position_index)
         return data
 
-    async def fail(self, job_id: UUID, *, queued_only: bool = False) -> None:
+    async def fail(
+        self, job_id: UUID, *, queued_only: bool = False, error: str | None = None
+    ) -> None:
         async with self.transactions.atomic():
             job = await self.repository.get_by_id(job_id, for_update=True)
             if job is None or job.status not in ACTIVE_JOB_STATUSES:
@@ -292,6 +294,6 @@ class MatchingService:
             if queued_only and job.status != ExtractionStatus.QUEUED:
                 return
             job.status = ExtractionStatus.FAILED
-            job.error = "Matching failed; see worker logs for details"
+            job.error = error or "Matching failed; see worker logs for details"
             job.finished_at = datetime.now(UTC)
             await self.repository.save(job)

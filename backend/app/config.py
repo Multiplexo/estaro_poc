@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     MINIO_API_PORT: int = 9000
     MINIO_CONSOLE_PORT: int = 9001
 
+    # OpenAI-compatible endpoint, e.g. https://api.langdock.com/openai/eu/v1.
+    # Empty uses OPENAI_BASE_URL or the OpenAI default.
+    LLM_BASE_URL: str | None = None
     API_KEY: str = ""
     MODEL: str = "gtp-6.1-luna"
     RECURSION_LIMIT: int = Field(default=30, ge=1)

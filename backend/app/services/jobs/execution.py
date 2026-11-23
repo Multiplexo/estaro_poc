@@ -16,7 +16,7 @@ from app.pipelines.matching.pipeline import run_matching_pipeline
 from app.services.domain.rules import RuleService
 from app.services.jobs.extractions import ExtractionService
 from app.services.jobs.matching import MatchingService
-from app.services.shared.ai import AIService
+from app.services.shared.ai import AIService, describe_ai_error
 from app.services.shared.minio import MinioService
 
 logger = structlog.get_logger(__name__)
@@ -69,9 +69,11 @@ class ExtractionExecutionService:
             await self.extractions.complete(
                 job_id, result, self.settings.MODEL, INQUIRY_EXTRACTION_PROMPT_VERSION
             )
-        except Exception:
+        except Exception as error:
             logger.exception("extraction_job_failed", job_id=str(job_id))
-            await self.extractions.fail(job_id)
+            await self.extractions.fail(
+                job_id, error=describe_ai_error(error, self.settings.MODEL)
+            )
             raise
         logger.info("extraction_job_succeeded", job_id=str(job_id))
         await self.matching.handoff(job_id)
@@ -113,8 +115,10 @@ class MatchingExecutionService:
                     job, agents, self.settings.MATCHING_CONCURRENCY
                 )
             await self.matching.complete(job_id, result)
-        except Exception:
+        except Exception as error:
             logger.exception("matching_job_failed", job_id=str(job_id))
-            await self.matching.fail(job_id)
+            await self.matching.fail(
+                job_id, error=describe_ai_error(error, self.settings.MODEL)
+            )
             raise
         logger.info("matching_job_succeeded", job_id=str(job_id))
