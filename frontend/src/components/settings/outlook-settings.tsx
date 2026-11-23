@@ -39,6 +39,7 @@ export function OutlookSettings({ result }: { result?: string }) {
             <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
               <dt className="text-muted-foreground">{t('settings.outlook.connection')}</dt>
               <dd className={status.connected ? 'font-medium text-emerald-700' : 'font-medium'}>{status.connected ? t('settings.outlook.configured') : t('settings.outlook.disconnected')}</dd>
+              {status.mode === 'application' ? <><dt className="text-muted-foreground">{t('settings.outlook.mailbox')}</dt><dd className="font-medium break-all">{status.mailbox}</dd></> : null}
               <dt className="text-muted-foreground">{t('settings.outlook.automaticFetch')}</dt>
               <dd className="font-medium">{status.fetch_enabled ? t('common.enabled') : t('common.disabled')}</dd>
               <dt className="text-muted-foreground">{t('settings.outlook.fetchInterval')}</dt>
@@ -48,7 +49,7 @@ export function OutlookSettings({ result }: { result?: string }) {
             {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
             {!status.configured ? <p className="text-sm text-muted-foreground">{t('settings.outlook.configurationError')}</p> : null}
             {!status.fetch_enabled ? <p className="text-sm text-muted-foreground">{t('settings.outlook.fetchDisabled')}</p> : null}
-            {isAdmin ? <div className="flex flex-wrap gap-3">
+            {status.mode === 'application' ? <p className="text-sm text-muted-foreground">{t('settings.outlook.applicationMode')}</p> : isAdmin ? <div className="flex flex-wrap gap-3">
               <Button type="button" variant="outline" disabled={!status.configured || disconnect.isPending} onClick={() => window.location.assign(api.instance.getUri({ url: '/auth/login' }))}>
                 <MicrosoftLogo />
                 {status.connected ? t('settings.outlook.reconnect') : t('settings.outlook.connect')}

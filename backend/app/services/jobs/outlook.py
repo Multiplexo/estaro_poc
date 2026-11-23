@@ -60,14 +60,22 @@ class OutlookFetchService:
         logger.info("outlook_fetch_finished", message_count=fetched)
 
     async def _fetch_page(self) -> OutlookFetchPageResult:
-        connection = await self.repository.lock_connection()
+        if self.outlook.application_access:
+            connection = await self._application_connection()
+        else:
+            connection = await self.repository.lock_connection()
         if connection is None:
             logger.info("outlook_connection_unavailable")
             return OutlookFetchPageResult()
 
-        tokens = await self.outlook.refresh(connection.refresh_token)
-        if tokens.refresh_token:
-            connection.refresh_token = self.outlook.encrypt_token(tokens.refresh_token)
+        if self.outlook.application_access:
+            await self.outlook.acquire_application_token()
+        else:
+            tokens = await self.outlook.refresh(connection.refresh_token)
+            if tokens.refresh_token:
+                connection.refresh_token = self.outlook.encrypt_token(
+                    tokens.refresh_token
+                )
         try:
             result = await self._download_page(connection)
         except Exception:
@@ -77,12 +85,24 @@ class OutlookFetchService:
         await self.repository.save(connection)
         return result
 
+    async def _application_connection(self) -> OutlookMailbox | None:
+        """The shared mailbox needs no user token; the row only keeps the delta link."""
+        mailbox = self.outlook.settings.MS_MAILBOX
+        connection = await self.repository.lock_connection()
+        if connection is not None and connection.account_id == mailbox:
+            return connection
+        # A different or missing mailbox starts a fresh delta sync.
+        await self.repository.connect(mailbox, refresh_token="")
+        return await self.repository.lock_connection()
+
     async def _download_page(
         self, connection: OutlookMailbox
     ) -> OutlookFetchPageResult:
-        builder = self.outlook.graph.me.mail_folders.by_mail_folder_id(
-            "inbox"
-        ).messages.delta
+        builder = (
+            self.outlook.mailbox()
+            .mail_folders.by_mail_folder_id("inbox")
+            .messages.delta
+        )
         config = RequestConfiguration(
             query_parameters=DeltaRequestBuilder.DeltaRequestBuilderGetQueryParameters(
                 select=["id"]
@@ -126,7 +146,7 @@ class OutlookFetchService:
         prefix = f"outlook/{account_key}/{message_key}"
         if await self.inputs.resume_email(prefix):
             return False
-        builder = self.outlook.graph.me.messages.by_message_id(message_id)
+        builder = self.outlook.mailbox().messages.by_message_id(message_id)
         try:
             response = await self.outlook.request(builder.get)
             mime = await self.outlook.request(builder.content.get)
@@ -169,9 +189,9 @@ class OutlookFetchService:
     async def _download_attachments(
         self, message_id: str, prefix: str
     ) -> list[OutlookAttachment]:
-        collection = self.outlook.graph.me.messages.by_message_id(
-            message_id
-        ).attachments
+        collection = (
+            self.outlook.mailbox().messages.by_message_id(message_id).attachments
+        )
         builder = collection
         config = RequestConfiguration(
             query_parameters=AttachmentsRequestBuilder.AttachmentsRequestBuilderGetQueryParameters(

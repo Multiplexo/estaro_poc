@@ -6,6 +6,7 @@ from typing import Any, cast
 from urllib.parse import urlsplit
 
 import httpx
+import httpx2
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 from cryptography.fernet import Fernet
@@ -15,6 +16,9 @@ from kiota_abstractions.request_information import RequestInformation
 from kiota_abstractions.serialization import Parsable
 from kiota_http.middleware.options import RetryHandlerOption, UrlReplaceHandlerOption
 from kiota_serialization_json.json_serialization_writer import JsonSerializationWriter
+from msgraph.generated.users.item.user_item_request_builder import (
+    UserItemRequestBuilder,
+)
 from msgraph.graph_request_adapter import GraphRequestAdapter
 from msgraph.graph_service_client import GraphServiceClient
 from msgraph_core import GraphClientFactory
@@ -30,12 +34,20 @@ from app.config import Settings
 from app.models.domain.outlook import OutlookAccount, OutlookTokens
 
 SCOPES = "offline_access https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/User.Read"
+APPLICATION_SCOPE = "https://graph.microsoft.com/.default"
+MULTI_TENANT_AUTHORITIES = {"common", "consumers", "organizations"}
+
+
+# Graph calls use httpx; Authlib's OAuth client is built on the httpx2 fork, whose
+# exceptions do not inherit from httpx's.
+TRANSPORT_ERRORS = (httpx.TransportError, httpx2.TransportError)
+HTTP_STATUS_ERRORS = (httpx.HTTPStatusError, httpx2.HTTPStatusError)
 
 
 def retry_outlook_request(exc: BaseException) -> bool:
-    if isinstance(exc, httpx.TransportError):
+    if isinstance(exc, TRANSPORT_ERRORS):
         return True
-    if isinstance(exc, httpx.HTTPStatusError):
+    if isinstance(exc, HTTP_STATUS_ERRORS):
         status = exc.response.status_code
     elif isinstance(exc, APIError):
         status = exc.response_status_code
@@ -46,8 +58,8 @@ def retry_outlook_request(exc: BaseException) -> bool:
 
 def outlook_retry_wait(state: RetryCallState) -> float:
     exc = state.outcome.exception() if state.outcome else None
-    if isinstance(exc, httpx.HTTPStatusError):
-        headers = exc.response.headers
+    if isinstance(exc, HTTP_STATUS_ERRORS):
+        headers = httpx.Headers(dict(exc.response.headers))
     elif isinstance(exc, APIError):
         headers = httpx.Headers(exc.response_headers or {})
     else:
@@ -138,6 +150,11 @@ class OutlookClient:
             )
         )
 
+    @property
+    def application_access(self) -> bool:
+        """True when a shared mailbox is read with an application permission."""
+        return bool(self.settings.MS_MAILBOX)
+
     def validate_configuration(self) -> None:
         if not self.settings.MS_CLIENT_ID or not self.settings.MS_CLIENT_SECRET:
             raise ValueError("MS_CLIENT_ID and MS_CLIENT_SECRET must be configured")
@@ -150,6 +167,27 @@ class OutlookClient:
             or authority.fragment
         ):
             raise ValueError("MS_AUTHORITY must be a Microsoft login authority")
+        if (
+            self.application_access
+            and authority.path.strip("/") in MULTI_TENANT_AUTHORITIES
+        ):
+            raise ValueError("MS_MAILBOX requires MS_AUTHORITY with the tenant ID")
+
+    def mailbox(self) -> UserItemRequestBuilder:
+        if self.application_access:
+            return self.graph.users.by_user_id(self.settings.MS_MAILBOX)
+        return self.graph.me
+
+    async def acquire_application_token(self) -> None:
+        """Fetch an app-only token; the auth provider reads it from the client."""
+        self.validate_configuration()
+        await self.request(
+            lambda: self.oauth.fetch_token(
+                f"{self.settings.MS_AUTHORITY.rstrip('/')}/oauth2/v2.0/token",
+                grant_type="client_credentials",
+                scope=APPLICATION_SCOPE,
+            )
+        )
 
     def authorization_url(self, verifier: str) -> str:
         self.validate_configuration()

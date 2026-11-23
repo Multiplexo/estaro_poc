@@ -4,6 +4,7 @@ from typing import Annotated
 from urllib.parse import urlencode
 
 import httpx
+import httpx2
 import structlog
 from authlib.integrations.base_client.errors import OAuthError
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
@@ -99,6 +100,7 @@ async def callback(
         )
     except (
         httpx.HTTPError,
+        httpx2.HTTPError,
         OAuthError,
         APIError,
         ValueError,
@@ -121,6 +123,15 @@ async def get_outlook_connection(
     except ValueError:
         configured = False
     response.headers["Cache-Control"] = "no-store"
+    if outlook.application_access:
+        return OutlookConnectionStatus(
+            connected=configured,
+            configured=configured,
+            fetch_enabled=outlook.settings.MS_FETCH_ENABLED,
+            fetch_interval_seconds=outlook.settings.MS_FETCH_INTERVAL_SECONDS,
+            mode="application",
+            mailbox=outlook.settings.MS_MAILBOX,
+        )
     return OutlookConnectionStatus(
         connected=await OutlookRepository(session).is_connected(),
         configured=configured,

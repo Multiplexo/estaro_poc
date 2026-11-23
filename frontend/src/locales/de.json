@@ -702,7 +702,9 @@
       "offlineAccessError": "Bitte erlaube den dauerhaften Outlook-Zugriff, damit E-Mails automatisch abgerufen werden können.",
       "connectionError": "Das Microsoft-Konto konnte nicht verbunden werden. Bitte versuche es erneut.",
       "intervalSeconds_one": "{{count}} Sekunde",
-      "intervalSeconds_other": "{{count}} Sekunden"
+      "intervalSeconds_other": "{{count}} Sekunden",
+      "mailbox": "Postfach",
+      "applicationMode": "Das Sonderpostfach wird mit einer Anwendungsberechtigung gelesen. Eine Verbindung über ein persönliches Microsoft-Konto ist nicht nötig."
     },
     "description": "Richte die Outlook-Verbindung für den automatischen E-Mail-Abruf ein."
   },

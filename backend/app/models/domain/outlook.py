@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,6 +21,8 @@ class OutlookConnectionStatus(BaseModel):
     configured: bool
     fetch_enabled: bool
     fetch_interval_seconds: int
+    mode: Literal["delegated", "application"] = "delegated"
+    mailbox: str | None = None
 
 
 class OutlookFetchPageResult(BaseModel):

@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     MS_REDIRECT_URI: str = "http://localhost:8000/auth/callback"
     MS_FRONTEND_URL: str = "http://localhost:5173"
     MS_FETCH_ENABLED: bool = False
+    # Shared mailbox read with application permission (Mail.Read). Empty uses the
+    # mailbox of the user who connected Outlook in the settings page.
+    MS_MAILBOX: str = ""
     MS_FETCH_INTERVAL_SECONDS: int = Field(default=300, ge=1)
 
     # Sign-in with Microsoft Entra ID. Disabled locally; every request then runs as

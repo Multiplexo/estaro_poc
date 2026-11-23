@@ -6,6 +6,8 @@ interface OutlookConnection {
   configured: boolean
   fetch_enabled: boolean
   fetch_interval_seconds: number
+  mode?: 'delegated' | 'application'
+  mailbox?: string | null
 }
 
 const queryKey = ['outlook-connection'] as const
