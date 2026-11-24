@@ -162,7 +162,7 @@ async def test_invalid_email_stops_before_ai_calls(
     ai_service.get_chat_model.assert_not_called()
 
 
-async def test_incomplete_recheck_does_not_return_partial_extraction(
+async def test_incomplete_recheck_keeps_first_extraction(
     source: InquiryDocument,
     storage: AsyncMock,
     extraction: InquiryExtraction,
@@ -173,7 +173,7 @@ async def test_incomplete_recheck_does_not_return_partial_extraction(
     model_responses["FieldsRecheck"] = {"fields": []}
     progress = AsyncMock()
 
-    with pytest.raises(ValueError, match="each requested field exactly once"):
-        await run_pipeline([source], storage, ai_service, progress, 0.5)
+    result = await run_pipeline([source], storage, ai_service, progress, 0.5)
 
-    assert progress.await_args_list[-1] == call("recheck_fields", 3)
+    assert result.anfragenummer.value == extraction.anfragenummer.value
+    assert progress.await_args_list[-1] == call("recheck_fields", 4)
