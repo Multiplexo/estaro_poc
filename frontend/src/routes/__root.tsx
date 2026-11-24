@@ -23,7 +23,7 @@ function RootLayout() {
   const { returnInquiryId } = useSearch({ strict: false })
   const rulesInquiryId = pathname === '/regeln' ? returnInquiryId : undefined
   const isReview = pathname.startsWith('/anfragen/') && pathname.endsWith('/pruefung')
-  const section = pathname.startsWith('/kunden') ? t('navigation.customers') : pathname.startsWith('/artikel') ? t('navigation.articles') : pathname.startsWith('/regeln') ? t('navigation.rules') : pathname.startsWith('/einstellungen') ? t('navigation.settings') : t('navigation.inquiries')
+  const section = pathname.startsWith('/kunden') ? t('navigation.customers') : pathname.startsWith('/artikel') ? t('navigation.articles') : pathname.startsWith('/regeln') ? t('navigation.rules') : pathname.startsWith('/einstellungen') ? t('navigation.settings') : pathname.startsWith('/auswertung') ? t('navigation.metrics') : t('navigation.inquiries')
   return (
     <TooltipProvider>
       <SidebarProvider>
