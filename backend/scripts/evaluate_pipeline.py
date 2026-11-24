@@ -65,6 +65,9 @@ class PositionResult(BaseModel):
     description: str | None = None
     confidence: float = 0
     conflicts: list[str] = Field(default_factory=list)
+    accessories: list[str] = Field(
+        default_factory=list, description="Suggested additional article numbers"
+    )
 
 
 class InquiryResult(BaseModel):
@@ -242,6 +245,7 @@ def build_result(
                 description=selected.label if selected else None,
                 confidence=article.confidence,
                 conflicts=article.conflicts,
+                accessories=[accessory.number for accessory in article.accessories],
             )
         )
     return InquiryResult(
@@ -309,14 +313,14 @@ def to_markdown(results: list[InquiryResult], model: str) -> str:
             "",
             f"## {result.file}",
             "",
-            "| Anfrage | Artikel | Matchcode | Konfidenz | Hinweise |",
-            "|---|---|---|---:|---|",
+            "| Anfrage | Artikel | Matchcode | Konfidenz | Zusatz | Hinweise |",
+            "|---|---|---|---:|---|---|",
         ]
         for p in result.positions:
             conflicts = "; ".join(p.conflicts).replace("|", "/")[:300]
             lines.append(
                 f"| {p.text} | {p.article_number or '–'} | {p.matchcode or ''}"
-                f" | {p.confidence:.2f} | {conflicts} |"
+                f" | {p.confidence:.2f} | {', '.join(p.accessories)} | {conflicts} |"
             )
     return "\n".join(lines) + "\n"
 

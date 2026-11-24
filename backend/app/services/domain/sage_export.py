@@ -86,7 +86,10 @@ def _cell(
 
 def build_rows(data: InquiryData, mapping: ExportMapping) -> list[list[str]]:
     payload = data.model_dump(mode="json")
-    positions: list[dict[str, Any]] = payload.get("positionen") or []
+    positions: list[dict[str, Any]] = [
+        *(payload.get("positionen") or []),
+        *payload.get("zusatzpositionen", []),
+    ]
     if mapping.layout == "records":
         rows = [[_cell(c, payload, None, None) for c in mapping.header_columns]]
         rows.extend(
@@ -140,6 +143,7 @@ def export_inquiry(
     logger.info(
         "sage_export_created",
         positions=len(data.positionen or []),
+        additional_positions=len(data.zusatzpositionen),
         format=mapping.format,
         layout=mapping.layout,
     )

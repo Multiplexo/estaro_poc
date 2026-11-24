@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 from app.models.domain.extraction_review import ExtractionReview, ReviewedField
 from app.models.domain.inquiries import InquiryExtractionSnapshot
-from app.models.domain.inquiry_data import InquiryData
+from app.models.domain.inquiry_data import AdditionalPosition, InquiryData
 from app.models.domain.inquiry_mapping import (
     map_article_to_inquiry,
     map_customer_to_inquiry,
@@ -19,6 +19,7 @@ from app.models.jobs.extraction import (
     extraction_fields,
 )
 from app.models.jobs.matching import (
+    AccessoryRequest,
     MatchingJobStatus,
     MatchingQueueUnavailable,
     MatchingResult,
@@ -185,6 +186,80 @@ class MatchingService:
             entity_id=request.entity_id,
         )
         return result
+
+    async def set_accessory(
+        self, extraction_job_id: UUID, request: AccessoryRequest
+    ) -> InquiryExtractionSnapshot:
+        """Add or remove a suggested accessory as an additional position."""
+        try:
+            async with self.transactions.atomic():
+                source = await self.reviews.lock_current(extraction_job_id)
+                if source.review.revision != request.revision:
+                    raise HTTPException(
+                        status_code=409, detail="Extraction review has changed"
+                    )
+                inquiry = await self.inquiries.get_record(source.inquiry_id)
+                if inquiry is None:
+                    raise HTTPException(
+                        status_code=409, detail="Inquiry is no longer available"
+                    )
+                data = InquiryData.model_validate(inquiry.daten)
+                data = await self._set_accessory(data, request)
+                review = ExtractionReview(
+                    revision=source.review.revision + 1,
+                    fields=dict(source.review.fields),
+                    updated_at=datetime.now(UTC),
+                )
+                result = await self.reviews.save(source, review, data)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        logger.info(
+            "matching_accessory_saved",
+            extraction_job_id=str(extraction_job_id),
+            position_index=request.position_index,
+            entity_id=request.entity_id,
+            selected=request.selected,
+        )
+        return result
+
+    async def _set_accessory(
+        self, data: InquiryData, request: AccessoryRequest
+    ) -> InquiryData:
+        if request.position_index >= len(data.positionen or []):
+            raise ValueError("Accessory requires a valid inquiry position")
+        remaining = [
+            position
+            for position in data.zusatzpositionen
+            if not (
+                position.zu_position == request.position_index
+                and position.entity_id == request.entity_id
+            )
+        ]
+        if not request.selected:
+            return data.model_copy(update={"zusatzpositionen": remaining})
+        if not request.entity_id.isdigit():
+            raise ValueError("Article ID must be numeric")
+        article = await self.articles.get_article(int(request.entity_id))
+        if article is None:
+            raise ValueError("Article not found")
+        accessory = AdditionalPosition(
+            zu_position=request.position_index,
+            entity_id=str(article.id),
+            artikel=article.article_number,
+            bezeichnung=article.description_1,
+            bezeichnung2=article.description_2,
+            menge="1",
+            mengeneinheit=article.sales_unit_code or article.sales_unit_name,
+            lagerbestand=str(article.stock_quantity),
+            lagerinfoPOS=article.main_storage_location,
+        )
+        return data.model_copy(
+            update={
+                "zusatzpositionen": sorted(
+                    [*remaining, accessory], key=lambda item: item.zu_position
+                )
+            }
+        )
 
     async def _select(
         self, data: InquiryData, request: MatchSelectionRequest

@@ -16,6 +16,7 @@ from app.models.jobs.matching import (
     MatchResult,
     matching_input,
 )
+from app.persistence.domain.articles.article_repository import ArticleRepository
 from app.persistence.jobs.matching.memory_repository import MatchingMemoryRepository
 from app.pipelines.guardrails import GUARDRAILS_SYSTEM_PROMPT, create_guardrails
 from app.pipelines.matching.prompts import ARTICLE_PROMPT, CUSTOMER_PROMPT
@@ -91,11 +92,36 @@ class MatchingAgents:
             {"recursion_limit": self.recursion_limit},
         )
         decision = MatchDecision.model_validate(response["structured_response"])
-        result = match_result(
-            decision,
-            {key: article_candidate(value) for key, value in candidates.items()},
-        )
+        options = {key: article_candidate(value) for key, value in candidates.items()}
+        result = match_result(decision, options)
+        result.accessories = await self.accessories(decision.accessory_ids, options)
+        if result.selected:
+            result.accessories = [
+                accessory
+                for accessory in result.accessories
+                if accessory.entity_id != result.selected.entity_id
+            ]
         return result
+
+    async def accessories(
+        self, references: list[str], candidates: Mapping[str, MatchCandidate]
+    ) -> list[MatchCandidate]:
+        """Resolve accessory references from candidates or by article number."""
+        found: dict[str, MatchCandidate] = {}
+        for reference in dict.fromkeys(references):
+            key = resolve_candidate_id(reference, candidates)
+            if key is not None:
+                found[key] = candidates[key]
+                continue
+            async with self.sessions() as session:
+                article = await ArticleRepository(session).get_article_by_number(
+                    reference
+                )
+            if article is None:
+                logger.warning("matching_accessory_unknown", reference=reference)
+                continue
+            found[str(article.id)] = article_candidate(article)
+        return list(found.values())
 
 
 def match_result(

@@ -119,6 +119,13 @@ class InquiryPosition(BaseModel):
     rabatt: str | None = None
 
 
+class AdditionalPosition(InquiryPosition):
+    """Accessory accepted from a matching suggestion, e.g. a 3.1 certificate."""
+
+    zu_position: int = Field(ge=0, description="Index of the position it belongs to")
+    entity_id: str
+
+
 class InquiryFieldMatch(BaseModel):
     origin: Literal["automatic", "manual"] = "automatic"
     category: Literal["customer", "article"]
@@ -139,4 +146,5 @@ class InquiryData(BaseModel):
     preisUndSteuerbasis: PreisUndSteuerbasis | None = None
     angebotsdetails: Angebotsdetails | None = None
     positionen: list[InquiryPosition] | None = None
+    zusatzpositionen: list[AdditionalPosition] = Field(default_factory=list)
     matching_provenance: dict[str, InquiryFieldMatch] = Field(default_factory=dict)

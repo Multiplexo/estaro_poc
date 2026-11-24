@@ -10,6 +10,7 @@ from app.dependencies import (
 )
 from app.models.domain.inquiries import InquiryExtractionSnapshot
 from app.models.jobs.matching import (
+    AccessoryRequest,
     MatchFeedback,
     MatchFeedbackRequest,
     MatchingJobStatus,
@@ -40,6 +41,14 @@ async def select_matching_candidate(
     job_id: UUID, request: MatchSelectionRequest, service: ServiceDep
 ) -> InquiryExtractionSnapshot:
     return await service.select_candidate(job_id, request)
+
+
+@router.put("/{job_id}/matching/accessories", operation_id="set_matching_accessory")
+async def set_matching_accessory(
+    job_id: UUID, request: AccessoryRequest, service: ServiceDep
+) -> InquiryExtractionSnapshot:
+    """Add or remove a suggested accessory as an additional position."""
+    return await service.set_accessory(job_id, request)
 
 
 @router.post(

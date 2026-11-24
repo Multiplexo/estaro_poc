@@ -60,6 +60,14 @@ class MatchDecision(BaseModel):
     confidence: float = Field(ge=0, le=1)
     reason: str = Field(min_length=1, max_length=600)
     conflicts: list[str] = Field(default_factory=list, max_length=20)
+    accessory_ids: list[str] = Field(
+        default_factory=list,
+        max_length=3,
+        description=(
+            "Article numbers of accessories (kind accessory) to add as separate "
+            "positions; empty for customers"
+        ),
+    )
 
 
 class MatchCandidate(BaseModel):
@@ -78,6 +86,9 @@ class MatchResult(BaseModel):
     reason: str
     conflicts: list[str] = Field(default_factory=list)
     requires_review: bool = True
+    accessories: list[MatchCandidate] = Field(
+        default_factory=list, description="Suggested additional positions"
+    )
 
 
 class ArticleMatchResult(MatchResult):
@@ -136,6 +147,17 @@ class MatchFeedbackRequest(MatchTargetRequest):
 
 class MatchSelectionRequest(MatchTargetRequest):
     revision: int = Field(ge=0)
+
+
+class AccessoryRequest(BaseModel):
+    """Add or remove a suggested accessory as an additional position."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    revision: int = Field(ge=0)
+    position_index: int = Field(ge=0)
+    entity_id: str = Field(min_length=1, max_length=100)
+    selected: bool
 
 
 class MatchFeedback(BaseModel):

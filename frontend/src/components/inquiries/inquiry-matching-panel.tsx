@@ -6,7 +6,8 @@ import type { InquiryMatching } from '@/hooks/use-inquiry-matching'
 import type { ReviewEditor } from '@/hooks/use-inquiry-review'
 import type { MasterDataKind } from '@/hooks/use-master-data-search'
 import type { ExtractionResult, InquiryResponse } from '@/lib/inquiry-models'
-import type { AgentMatchResult } from '@/lib/inquiry-processing'
+import { additionalPositions, type AgentMatchResult } from '@/lib/inquiry-processing'
+import { MatchingAccessories } from './matching-accessories'
 import { MatchingCandidates } from './matching-candidates'
 import { MatchingExtraction } from './matching-extraction'
 
@@ -32,8 +33,8 @@ export function InquiryMatchingPanel({ matching, editor, extraction, inquiry, ac
   activeKey: string; onTargetChange: (key: string) => void
 }) {
   const { t } = useTranslation()
-  const { job, selection, running } = matching
-  const disabled = editor.disabled || selection.isPending || !matching.available
+  const { job, selection, accessory, running } = matching
+  const disabled = editor.disabled || selection.isPending || accessory.isPending || !matching.available
   const data = inquiry?.daten
   const provenance = data?.matching_provenance ?? {}
   const customer = provenance['kundeninformationen.kunde']
@@ -61,7 +62,7 @@ export function InquiryMatchingPanel({ matching, editor, extraction, inquiry, ac
   return <div className="@container p-4 sm:p-5">
     <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
       <p>{t('matching.savedImmediately')}</p>
-      <div role="status" aria-live="polite">{selection.isPending ? t('matching.savingAssignment') : selection.isSuccess ? <span className="inline-flex items-center gap-1.5"><Check aria-hidden="true" className="size-3.5" />{t('matching.assignmentSaved')}</span> : t('matching.assignedCount', { count: assigned, total: targets.length })}</div>
+      <div role="status" aria-live="polite">{selection.isPending || accessory.isPending ? t('matching.savingAssignment') : selection.isSuccess || accessory.isSuccess ? <span className="inline-flex items-center gap-1.5"><Check aria-hidden="true" className="size-3.5" />{t('matching.assignmentSaved')}</span> : t('matching.assignedCount', { count: assigned, total: targets.length })}</div>
     </div>
     <div className="space-y-3 text-sm leading-6 [&:has(>*)]:mb-5">
       {!matching.available ? <p role="status">{t('matching.noMatchingExtraction')}</p> : null}
@@ -70,6 +71,7 @@ export function InquiryMatchingPanel({ matching, editor, extraction, inquiry, ac
       {job.data?.status === 'failed' ? <p role="alert" className="text-destructive">{t('matching.failedHint')}</p> : null}
       {job.isSuccess && !job.data ? <p role="status">{t('matching.noResultsHint')}</p> : null}
       {selection.isError ? <p role="alert" className="text-destructive">{t('matching.assignmentError', { error: selection.error.message })}</p> : null}
+      {accessory.isError ? <p role="alert" className="text-destructive">{t('matching.assignmentError', { error: accessory.error.message })}</p> : null}
     </div>
     <div className="grid min-w-0 items-start gap-5 @min-[48rem]:grid-cols-[14rem_minmax(0,1fr)]">
       <div className="@min-[48rem]:hidden">
@@ -105,6 +107,7 @@ export function InquiryMatchingPanel({ matching, editor, extraction, inquiry, ac
             <p className="mt-1 mb-4 text-xs leading-5 text-muted-foreground">{active.kind === 'customers' ? t('matching.chooseCustomer') : t('matching.chooseArticle')}</p>
             <MatchingCandidates key={active.key} kind={active.kind} result={active.result} selectedId={active.selectedId} selectedLabel={active.selectedLabel} disabled={disabled} outdated={!!job.data?.result && job.data.input_revision !== editor.revision}
               onSelect={(entity_id) => selection.mutate(active.kind === 'customers' ? { category: 'customer', entity_id } : { category: 'article', position_index: active.positionIndex!, entity_id })} />
+            {active.positionIndex !== undefined ? <MatchingAccessories key={`${active.key}-accessories`} positionIndex={active.positionIndex} suggestions={active.result?.accessories ?? []} added={additionalPositions(data)} disabled={disabled} onChange={(change) => accessory.mutate(change)} /> : null}
           </section>
           <MatchingExtraction key={active.key} extraction={extraction} positionIndex={active.positionIndex} />
         </div>

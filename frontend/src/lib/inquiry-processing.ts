@@ -17,6 +17,26 @@ export interface AgentMatchResult {
   reason: string
   conflicts: string[]
   requires_review: boolean
+  accessories?: AgentMatchCandidate[]
+}
+
+export interface AdditionalPosition {
+  zu_position: number
+  entity_id: string
+  artikel?: string | null
+  bezeichnung?: string | null
+  menge?: string | null
+  mengeneinheit?: string | null
+}
+
+export interface AccessoryChange {
+  position_index: number
+  entity_id: string
+  selected: boolean
+}
+
+export function additionalPositions(data?: InquiryData | null): AdditionalPosition[] {
+  return (data as { zusatzpositionen?: AdditionalPosition[] } | null | undefined)?.zusatzpositionen ?? []
 }
 
 export type MatchingProcessingJob = Pick<ExtractionJobStatus, 'id' | 'status' | 'error'> & {

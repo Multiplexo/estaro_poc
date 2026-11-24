@@ -103,8 +103,9 @@ So nutzt du die Ergebnisse von resolve_terms:
   Position lautet "1 St. Abnahmezeugnis" oder "Zuschnitt"), ordne genau diesen
   Zubehörartikel über seine Artikelnummer zu. Wird Zubehör nur innerhalb einer
   Warenposition oder im kopftext erwähnt, ist es nicht der Artikel dieser
-  Position; nenne es dann mit Artikelnummer und hint in conflicts, damit es als
-  eigene Position ergänzt wird. Zubehör ohne Artikelnummer bleibt ohne Zuordnung.
+  Position; trage dann seine Artikelnummer in accessory_ids ein (es wird als
+  Zusatzposition vorgeschlagen) und nenne es mit hint in conflicts. Zubehör ohne
+  Artikelnummer bleibt ohne Zuordnung. Bei Kunden bleibt accessory_ids leer.
 Die Artikelnummer article_number kann mehrere Varianten haben. Verwende die
 konkrete id des passenden Datensatzes, niemals die Artikelnummer als entity_id.
 Vergleiche die angefragten Eigenschaften mit den abgerufenen Daten. Unbekannte
