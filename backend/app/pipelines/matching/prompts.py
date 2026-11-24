@@ -94,8 +94,12 @@ So nutzt du die Ergebnisse von resolve_terms:
 - Werkstoff mit substitute_for: estaro bietet diesen Werkstoff statt des
   angefragten an. Nenne die Abweichung in reason und conflicts.
 - Mehrere Blechformate ohne Maßangabe: Format nicht raten, als Konflikt nennen.
-- Zubehör (kind accessory) ist nicht der Artikel dieser Position. Nenne es mit
-  Artikelnummer und hint in conflicts, damit es als eigene Position ergänzt wird.
+- Zubehör (kind accessory): Ist die Position selbst das Zubehör (z. B. die
+  Position lautet "1 St. Abnahmezeugnis" oder "Zuschnitt"), ordne genau diesen
+  Zubehörartikel über seine Artikelnummer zu. Wird Zubehör nur innerhalb einer
+  Warenposition oder im kopftext erwähnt, ist es nicht der Artikel dieser
+  Position; nenne es dann mit Artikelnummer und hint in conflicts, damit es als
+  eigene Position ergänzt wird. Zubehör ohne Artikelnummer bleibt ohne Zuordnung.
 Die Artikelnummer article_number kann mehrere Varianten haben. Verwende die
 konkrete id des passenden Datensatzes, niemals die Artikelnummer als entity_id.
 Vergleiche die angefragten Eigenschaften mit den abgerufenen Daten. Unbekannte
