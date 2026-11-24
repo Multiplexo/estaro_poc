@@ -38,6 +38,7 @@ COLUMNS = (
 )
 WIDTHS = (42, 10, 5, 70, 12, 28, 10, 60)
 NONE_VALUE = "keine"
+SHEET = "Golden Set"
 RowKind = Literal["Kunde", "Position", "Zusatz"]
 
 
@@ -79,13 +80,14 @@ def cell_text(value: object) -> str | None:
 
 
 def load_golden(path: Path, confirmed_only: bool = False) -> dict[str, GoldenInquiry]:
-    sheet = load_workbook(path, read_only=True).active
+    book = load_workbook(path, read_only=True)
+    sheet = book[SHEET] if SHEET in book.sheetnames else book.active
     if sheet is None:
         return {}
     golden: dict[str, GoldenInquiry] = {}
     for row in sheet.iter_rows(min_row=2, values_only=True):
         file, kind, index, _, expected, _, confirmed = (
-            cell_text(value) for value in row[:7]
+            cell_text(value) for value in (*row, *[None] * 7)[:7]
         )
         if not file or kind not in ("Kunde", "Position", "Zusatz"):
             continue
@@ -197,7 +199,7 @@ def create(results_path: Path, output: Path) -> int:
     sheet = book.active
     if sheet is None:
         return 1
-    sheet.title = "Golden Set"
+    sheet.title = SHEET
     sheet.append(COLUMNS)
     for cell in sheet[1]:
         cell.font = Font(bold=True)
