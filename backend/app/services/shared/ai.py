@@ -26,7 +26,9 @@ class AIService:
         self._timeout = 120.0
         # The SDK retries rate limits and transient errors and honors Retry-After.
         self._max_retries = settings.LLM_MAX_RETRIES
+        self._guardrail_model_name = settings.GUARDRAIL_MODEL or settings.MODEL
         self._chat_model: ChatOpenAI | None = None
+        self._guardrail_model: ChatOpenAI | None = None
         self.client = AsyncOpenAI(
             api_key=self._api_key.get_secret_value(),
             base_url=self._base_url,
@@ -50,25 +52,38 @@ class AIService:
             try:
                 if self._chat_model is not None:
                     await run_in_threadpool(self._chat_model.root_client.close)
+                if self._guardrail_model is not None:
+                    await run_in_threadpool(self._guardrail_model.root_client.close)
             finally:
                 await self.client.close()
         except Exception:
             logger.exception("ai_client_close_failed")
             raise
 
+    def _create_chat_model(self, model: str) -> ChatOpenAI:
+        return ChatOpenAI(
+            model=model,
+            api_key=self._api_key,
+            base_url=self._base_url,
+            root_async_client=self.client,
+            async_client=self.client.chat.completions,
+            use_responses_api=True,
+            max_retries=self._max_retries,
+            timeout=self._timeout,
+        )
+
     def get_chat_model(self) -> ChatOpenAI:
         if self._chat_model is None:
-            self._chat_model = ChatOpenAI(
-                model=self._model_name,
-                api_key=self._api_key,
-                base_url=self._base_url,
-                root_async_client=self.client,
-                async_client=self.client.chat.completions,
-                use_responses_api=True,
-                max_retries=self._max_retries,
-                timeout=self._timeout,
-            )
+            self._chat_model = self._create_chat_model(self._model_name)
         return self._chat_model
+
+    def get_guardrail_model(self) -> ChatOpenAI:
+        """Model for the prompt-injection check (GUARDRAIL_MODEL or MODEL)."""
+        if self._guardrail_model_name == self._model_name:
+            return self.get_chat_model()
+        if self._guardrail_model is None:
+            self._guardrail_model = self._create_chat_model(self._guardrail_model_name)
+        return self._guardrail_model
 
 
 def _find_provider_error(error: BaseException) -> openai.APIError | None:

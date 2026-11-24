@@ -69,7 +69,7 @@ async def _extract_structured[Result: ExtractionSchema](
     agent = create_agent(
         model=ai_service.get_chat_model(),
         system_prompt=SYSTEM_PROMPT + rules_prompt + GUARDRAILS_SYSTEM_PROMPT,
-        middleware=create_guardrails(ai_service.get_chat_model()),
+        middleware=create_guardrails(ai_service.get_guardrail_model()),
         response_format=ProviderStrategy(
             convert_to_json_schema(schema, strict=True), strict=True
         ),

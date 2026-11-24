@@ -6,7 +6,7 @@ or article that was assigned manually instead of accepted from matching.
 
 import re
 from collections import Counter, defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -136,26 +136,32 @@ def compute_pilot_metrics(items: list[ReviewedInquiry]) -> PilotMetrics:
     )
 
 
+Prices = Callable[[str], tuple[float, float] | None]
+
+
 class UsageEntry(Protocol):
     created_at: datetime
+    model: str
     inquiry_id: UUID | None
     input_tokens: int
     output_tokens: int
 
 
-def _cost(
-    input_tokens: int, output_tokens: int, prices: tuple[float, float] | None
-) -> float | None:
-    if prices is None:
-        return None
-    return round(
-        input_tokens / 1_000_000 * prices[0] + output_tokens / 1_000_000 * prices[1], 4
-    )
+def _cost(entries: Sequence[UsageEntry], prices: Prices) -> float | None:
+    """Sum of all entries, None if a model has no configured price."""
+    total = 0.0
+    for entry in entries:
+        price = prices(entry.model)
+        if price is None:
+            return None
+        total += (
+            entry.input_tokens / 1_000_000 * price[0]
+            + entry.output_tokens / 1_000_000 * price[1]
+        )
+    return round(total, 4)
 
 
-def compute_cost_metrics(
-    entries: Sequence[UsageEntry], prices: tuple[float, float] | None
-) -> CostMetrics:
+def compute_cost_metrics(entries: Sequence[UsageEntry], prices: Prices) -> CostMetrics:
     if not entries:
         return CostMetrics()
     inquiries = {entry.inquiry_id for entry in entries if entry.inquiry_id}
@@ -166,7 +172,7 @@ def compute_cost_metrics(
     for entry in entries:
         year, week, _ = entry.created_at.isocalendar()
         by_week[f"{year}-W{week:02d}"].append(entry)
-    total = _cost(input_tokens, output_tokens, prices)
+    total = _cost(entries, prices)
     return CostMetrics(
         inquiries=len(inquiries),
         input_tokens=input_tokens,
@@ -181,11 +187,7 @@ def compute_cost_metrics(
                 inquiries=len({e.inquiry_id for e in week_entries if e.inquiry_id}),
                 input_tokens=sum(e.input_tokens for e in week_entries),
                 output_tokens=sum(e.output_tokens for e in week_entries),
-                cost_eur=_cost(
-                    sum(e.input_tokens for e in week_entries),
-                    sum(e.output_tokens for e in week_entries),
-                    prices,
-                ),
+                cost_eur=_cost(week_entries, prices),
             )
             for week, week_entries in sorted(by_week.items())
         ],

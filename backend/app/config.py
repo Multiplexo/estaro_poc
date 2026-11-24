@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     LLM_PRICE_INPUT_EUR_PER_MILLION: float | None = Field(default=None, ge=0)
     LLM_PRICE_OUTPUT_EUR_PER_MILLION: float | None = Field(default=None, ge=0)
     MODEL: str = "gtp-6.1-luna"
+    # Smaller model for the prompt-injection check; empty uses MODEL.
+    GUARDRAIL_MODEL: str | None = None
+    GUARDRAIL_PRICE_INPUT_EUR_PER_MILLION: float | None = Field(default=None, ge=0)
+    GUARDRAIL_PRICE_OUTPUT_EUR_PER_MILLION: float | None = Field(default=None, ge=0)
     RECURSION_LIMIT: int = Field(default=50, ge=1)
 
     CORS_ORIGINS: list[str] = Field(default_factory=list)

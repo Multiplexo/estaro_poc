@@ -76,6 +76,7 @@ class InquiryResult(BaseModel):
     output_tokens: int = 0
     extraction_input_tokens: int = 0
     extraction_seconds: float = 0
+    tokens_by_model: dict[str, tuple[int, int]] = Field(default_factory=dict)
     customer_number: str | None = None
     customer_name: str | None = None
     customer_confidence: float = 0
@@ -193,10 +194,18 @@ async def evaluate_file(path: Path, prompts: dict[str, str]) -> InquiryResult:
                 output_tokens=tokens[1],
             )
         tokens = usage_totals(usage.usage_metadata)
+        by_model = {
+            model: (
+                int(entry.get("input_tokens", 0)),
+                int(entry.get("output_tokens", 0)),
+            )
+            for model, entry in usage.usage_metadata.items()
+        }
     matchcodes = await article_matchcodes(matching)
     result = build_result(path, extraction, matching, started, tokens, matchcodes)
     result.extraction_input_tokens = extraction_tokens
     result.extraction_seconds = extraction_seconds
+    result.tokens_by_model = by_model
     return result
 
 

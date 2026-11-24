@@ -27,27 +27,28 @@ async def record_usage(
     job_kind: str,
     job_id: UUID,
     inquiry_id: UUID | None,
-    model: str,
     usage: Mapping[str, Any],
     succeeded: bool,
 ) -> None:
-    """Store token usage; never fails the job that caused it."""
-    input_tokens, output_tokens = usage_totals(usage)
-    if not input_tokens and not output_tokens:
+    """Store token usage per model; never fails the job that caused it."""
+    rows = [
+        AIUsage(
+            job_kind=job_kind,
+            job_id=job_id,
+            inquiry_id=inquiry_id,
+            model=model,
+            input_tokens=int(entry.get("input_tokens", 0)),
+            output_tokens=int(entry.get("output_tokens", 0)),
+            succeeded=succeeded,
+        )
+        for model, entry in usage.items()
+        if entry.get("input_tokens") or entry.get("output_tokens")
+    ]
+    if not rows:
         return
     try:
         async with sessions() as session:
-            session.add(
-                AIUsage(
-                    job_kind=job_kind,
-                    job_id=job_id,
-                    inquiry_id=inquiry_id,
-                    model=model,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    succeeded=succeeded,
-                )
-            )
+            session.add_all(rows)
             await session.commit()
     except SQLAlchemyError:
         logger.exception("ai_usage_record_failed", job_id=str(job_id))

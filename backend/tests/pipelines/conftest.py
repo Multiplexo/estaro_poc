@@ -87,4 +87,5 @@ async def ai_service(
         )
         service = Mock(spec=AIService)
         service.get_chat_model.return_value = model
+        service.get_guardrail_model.return_value = model
         yield service

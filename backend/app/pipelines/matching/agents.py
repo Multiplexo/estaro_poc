@@ -50,7 +50,7 @@ class MatchingAgents:
             system_prompt=CUSTOMER_PROMPT
             + self.rules_prompt
             + GUARDRAILS_SYSTEM_PROMPT,
-            middleware=create_guardrails(self.ai_service.get_chat_model()),
+            middleware=create_guardrails(self.ai_service.get_guardrail_model()),
             response_format=ProviderStrategy(
                 convert_to_json_schema(MatchDecision, strict=True), strict=True
             ),
@@ -78,7 +78,7 @@ class MatchingAgents:
             self.ai_service.get_chat_model(),
             tools=create_position_tools(self.sessions, self.memory, candidates),
             system_prompt=ARTICLE_PROMPT + self.rules_prompt + GUARDRAILS_SYSTEM_PROMPT,
-            middleware=create_guardrails(self.ai_service.get_chat_model()),
+            middleware=create_guardrails(self.ai_service.get_guardrail_model()),
             response_format=ProviderStrategy(
                 convert_to_json_schema(MatchDecision, strict=True), strict=True
             ),

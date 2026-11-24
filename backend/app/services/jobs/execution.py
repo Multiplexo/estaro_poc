@@ -98,7 +98,6 @@ class ExtractionExecutionService:
                         job_kind="extraction",
                         job_id=job_id,
                         inquiry_id=job.inquiry_id,
-                        model=self.settings.MODEL,
                         usage=usage.usage_metadata,
                         succeeded=succeeded,
                     )
@@ -157,7 +156,6 @@ class MatchingExecutionService:
                     job_kind="matching",
                     job_id=job_id,
                     inquiry_id=job.inquiry_id,
-                    model=self.settings.MODEL,
                     usage=usage.usage_metadata,
                     succeeded=succeeded,
                 )
