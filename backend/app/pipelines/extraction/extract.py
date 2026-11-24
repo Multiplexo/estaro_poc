@@ -41,6 +41,11 @@ class UngroundedCitationError(ValueError):
     """A citation does not match the source documents."""
 
 
+def _collapse(text: str) -> str:
+    """Compare quotes independent of whitespace runs, e.g. aligned e-mail columns."""
+    return " ".join(text.split())
+
+
 def _ground_citations(
     extraction: InquiryExtraction, documents: list[ClassifiedDocument]
 ) -> InquiryExtraction:
@@ -56,7 +61,9 @@ def _ground_citations(
                 raise UngroundedCitationError(
                     "Citation must reference a known document section"
                 )
-            if source.text is not None and citation.quote not in source.text:
+            if source.text is not None and _collapse(citation.quote) not in _collapse(
+                source.text
+            ):
                 raise UngroundedCitationError(
                     "Email citation must quote its source section verbatim"
                 )
