@@ -5,6 +5,8 @@ Uses the configured AI provider (LLM_BASE_URL, API_KEY, MODEL) and database
 (master data, rules and designation list must be imported). Files are read from
 disk instead of MinIO; e-mail attachments become child documents like an upload.
 Writes a JSON and a Markdown report with results, run time and token usage.
+With --expected GOLDEN.xlsx the run is scored against the golden set (see
+scripts.golden_set).
 """
 
 import argparse
@@ -38,6 +40,7 @@ from app.services.factory import create_rule_service
 from app.services.shared.ai import AIService, describe_ai_error
 from app.services.shared.database import database_service
 from app.services.shared.email import parse_email
+from scripts.golden_set import load_golden, rate, score, score_markdown
 
 logger = structlog.get_logger(__name__)
 console = Console()
@@ -340,6 +343,8 @@ def main() -> int:
     parser.add_argument("paths", nargs="+", type=Path)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--output", type=Path, default=Path("evaluation"))
+    parser.add_argument("--expected", type=Path, help="Golden set (.xlsx)")
+    parser.add_argument("--confirmed-only", action="store_true")
     args = parser.parse_args()
     files = collect(args.paths, args.limit)
     if not files:
@@ -347,9 +352,15 @@ def main() -> int:
         return 1
     model = get_settings().MODEL
     results = asyncio.run(run(files, args.output))
-    args.output.with_suffix(".md").write_text(
-        to_markdown(results, model), encoding="utf-8"
-    )
+    report = to_markdown(results, model)
+    golden_score = None
+    if args.expected:
+        golden_score = score(
+            [r.model_dump() for r in results],
+            load_golden(args.expected, args.confirmed_only),
+        )
+        report = report + "\n" + score_markdown(golden_score)
+    args.output.with_suffix(".md").write_text(report, encoding="utf-8")
 
     table = Table(title=f"Auswertung ({model})")
     for column in ("Datei", "Kunde", "Pos.", "zugeordnet", "Sek.", "Tokens ein/aus"):
@@ -364,6 +375,12 @@ def main() -> int:
             f"{r.input_tokens}/{r.output_tokens}",
         )
     console.print(table)
+    if golden_score:
+        console.print(
+            f"Kunde richtig: {rate(golden_score.customers_correct, golden_score.customers)}"
+            f" · Artikel richtig: "
+            f"{rate(golden_score.positions_correct, golden_score.positions)}"
+        )
     return 0 if all(r.ok for r in results) else 1
 
 
