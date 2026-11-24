@@ -49,8 +49,10 @@ class Settings(BaseSettings):
     # Empty uses OPENAI_BASE_URL or the OpenAI default.
     LLM_BASE_URL: str | None = None
     API_KEY: str = ""
+    # Retries for rate limits (429, honoring Retry-After), timeouts and 5xx.
+    LLM_MAX_RETRIES: int = Field(default=4, ge=0, le=10)
     MODEL: str = "gtp-6.1-luna"
-    RECURSION_LIMIT: int = Field(default=30, ge=1)
+    RECURSION_LIMIT: int = Field(default=50, ge=1)
 
     CORS_ORIGINS: list[str] = Field(default_factory=list)
 

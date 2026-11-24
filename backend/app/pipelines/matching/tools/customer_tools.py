@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 from langchain.tools import tool
@@ -11,6 +12,20 @@ from app.models.jobs.matching import MatchFeedback
 from app.persistence.domain.customers.customer_repository import CustomerRepository
 from app.persistence.jobs.matching.memory_repository import MatchingMemoryRepository
 
+CUSTOMER_SEARCH_FIELDS = {
+    "id",
+    "customer_number",
+    "matchcode",
+    "name",
+    "name_addition",
+    "postal_code",
+    "city",
+    "country_code",
+    "vat_id",
+    "is_active",
+    "delivery_blocked",
+}
+
 
 def create_customer_tools(
     sessions: async_sessionmaker[AsyncSession],
@@ -19,11 +34,18 @@ def create_customer_tools(
 ) -> list[BaseTool]:
     @tool
     async def search_customers(query: str) -> str:
-        """Suche Kunden im lokalen Stamm über Nummer, Name, Matchcode, Ort, Postleitzahl oder USt-ID."""
+        """Suche Kunden im lokalen Stamm über Nummer, Name, Matchcode, Ort, Postleitzahl oder USt-ID. Liefert Kurzdaten; alle Felder mit get_customer_details."""
         async with sessions() as session:
             records = await CustomerRepository(session).search(query)
         candidates.update({str(record.id): record for record in records})
-        return TypeAdapter(list[Customer]).dump_json(records).decode()
+        # Compact rows keep token use low; get_customer_details returns all fields.
+        return json.dumps(
+            [
+                record.model_dump(mode="json", include=CUSTOMER_SEARCH_FIELDS)
+                for record in records
+            ],
+            ensure_ascii=False,
+        )
 
     @tool
     async def get_customer_by_number(customer_number: str) -> str:

@@ -1,3 +1,5 @@
+import json
+
 from langchain.tools import tool
 from langchain_core.tools import BaseTool
 from pydantic import PositiveInt, TypeAdapter
@@ -11,6 +13,18 @@ from app.persistence.domain.articles.article_repository import ArticleRepository
 from app.persistence.domain.terms.term_repository import TermRepository
 from app.persistence.jobs.matching.memory_repository import MatchingMemoryRepository
 from app.services.domain.terms import resolve_terms as find_terms
+
+ARTICLE_SEARCH_FIELDS = {
+    "id",
+    "article_number",
+    "variant",
+    "matchcode",
+    "description_1",
+    "description_2",
+    "article_group_name",
+    "sales_unit_code",
+    "stock_quantity",
+}
 
 
 def create_position_tools(
@@ -29,13 +43,21 @@ def create_position_tools(
         müssen exakt übereinstimmen. Boolesche Filter benötigen true oder false.
         Es werden ausschließlich aktive Artikel zurückgegeben, unabhängig von filters.
         Werkstoffe und Maße können als Suchtext oder Beschreibung gefiltert werden.
+        Liefert Kurzdaten je Treffer; alle Felder mit get_article_details.
         """
         async with sessions() as session:
             records = await ArticleRepository(session).search(
                 query, filters=filters.model_copy(update={"is_active": True})
             )
         candidates.update({str(record.id): record for record in records})
-        return TypeAdapter(list[Article]).dump_json(records).decode()
+        # Compact rows keep token use low; get_article_details returns all fields.
+        return json.dumps(
+            [
+                record.model_dump(mode="json", include=ARTICLE_SEARCH_FIELDS)
+                for record in records
+            ],
+            ensure_ascii=False,
+        )
 
     @tool
     async def get_article_details(article_id: PositiveInt) -> str:

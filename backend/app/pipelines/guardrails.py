@@ -1,3 +1,4 @@
+from hashlib import sha256
 from typing import Any
 
 import structlog
@@ -55,20 +56,38 @@ class InjectionDecision(BaseModel):
     )
 
 
+def _message_key(message: BaseMessage) -> str:
+    if message.id:
+        return message.id
+    content = (
+        message.content if isinstance(message.content, str) else repr(message.content)
+    )
+    return sha256(f"{message.type}:{content}".encode()).hexdigest()
+
+
 def create_guardrails(model: BaseChatModel) -> list[AgentMiddleware[Any]]:
     detector = model.with_structured_output(
         InjectionDecision, method="json_schema", strict=True
     )
 
+    # Each input or tool result is checked once, before the model first sees it.
+    # Re-sending the whole history before every model call multiplied token use.
+    checked: set[str] = set()
+
     @before_model
     async def check_prompt_injection(state: AgentState, runtime: Runtime) -> None:
-        payloads = [
+        all_payloads = [
             message
             for message in state["messages"]
             if message.type in {"human", "tool"}
         ]
-        if not payloads:
+        if not all_payloads:
             raise ValueError("Guardrail requires input data")
+        payloads = [
+            message for message in all_payloads if _message_key(message) not in checked
+        ]
+        if not payloads:
+            return
 
         messages: list[BaseMessage] = [SystemMessage(content=_INJECTION_CHECK_PROMPT)]
         for message in payloads:
@@ -85,6 +104,8 @@ def create_guardrails(model: BaseChatModel) -> list[AgentMiddleware[Any]]:
             logger.exception("agent_guardrail_check_failed")
             raise
 
+        if not decision.prompt_injection:
+            checked.update(_message_key(message) for message in payloads)
         if decision.prompt_injection:
             logger.warning(
                 "agent_prompt_injection_blocked", payload_count=len(payloads)

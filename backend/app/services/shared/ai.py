@@ -24,7 +24,8 @@ class AIService:
         self._model_name = settings.MODEL
         self._base_url = settings.LLM_BASE_URL or None
         self._timeout = 120.0
-        self._max_retries = 0
+        # The SDK retries rate limits and transient errors and honors Retry-After.
+        self._max_retries = settings.LLM_MAX_RETRIES
         self._chat_model: ChatOpenAI | None = None
         self.client = AsyncOpenAI(
             api_key=self._api_key.get_secret_value(),
