@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     API_KEY: str = ""
     # Retries for rate limits (429, honoring Retry-After), timeouts and 5xx.
     LLM_MAX_RETRIES: int = Field(default=4, ge=0, le=10)
+    # Prices in EUR per 1M tokens for the cost overview; empty shows tokens only.
+    LLM_PRICE_INPUT_EUR_PER_MILLION: float | None = Field(default=None, ge=0)
+    LLM_PRICE_OUTPUT_EUR_PER_MILLION: float | None = Field(default=None, ge=0)
     MODEL: str = "gtp-6.1-luna"
     RECURSION_LIMIT: int = Field(default=50, ge=1)
 

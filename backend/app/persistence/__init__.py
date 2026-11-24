@@ -14,8 +14,10 @@ from app.persistence.domain.rules.schema.rule import Rule
 from app.persistence.domain.terms.schema.term import ArticleTerm
 from app.persistence.jobs.extractions.schema.extraction_job import ExtractionJob
 from app.persistence.jobs.matching.schema.matching_job import MatchingJob
+from app.persistence.jobs.usage.schema.ai_usage import AIUsage
 
 __all__ = [
+    "AIUsage",
     "Article",
     "ArticleTerm",
     "Customer",

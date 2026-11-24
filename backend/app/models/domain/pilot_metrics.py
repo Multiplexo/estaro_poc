@@ -33,6 +33,29 @@ class WeeklyMetrics(BaseModel):
     corrections_per_inquiry: float
 
 
+class WeeklyCosts(BaseModel):
+    week: str
+    inquiries: int
+    input_tokens: int
+    output_tokens: int
+    cost_eur: float | None = None
+
+
+class CostMetrics(BaseModel):
+    """AI usage of all runs (also failed ones) and the resulting costs."""
+
+    inquiries: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    input_tokens_per_inquiry: int = 0
+    output_tokens_per_inquiry: int = 0
+    cost_eur: float | None = Field(
+        default=None, description="Total; None while no prices are configured"
+    )
+    cost_per_inquiry_eur: float | None = None
+    weekly: list[WeeklyCosts] = Field(default_factory=list)
+
+
 class PilotMetrics(BaseModel):
     """Key figures for the pilot, computed from completed reviews."""
 
@@ -52,3 +75,4 @@ class PilotMetrics(BaseModel):
     )
     corrections_by_field: list[FieldCorrections] = Field(default_factory=list)
     weekly: list[WeeklyMetrics] = Field(default_factory=list)
+    costs: CostMetrics = Field(default_factory=CostMetrics)

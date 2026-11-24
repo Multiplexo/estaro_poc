@@ -746,6 +746,22 @@
       "customer": "Kunde & Kontakt",
       "inquiry": "Anfragedaten",
       "position": "Positionen"
+    },
+    "costs": {
+      "title": "KI-Kosten",
+      "description": "Alle Läufe von Extraktion und Zuordnung, auch fehlgeschlagene und wiederholte. Preise laut Konfiguration.",
+      "noPrices": "Tokenverbrauch aller Läufe. Für Euro-Beträge LLM_PRICE_INPUT_EUR_PER_MILLION und LLM_PRICE_OUTPUT_EUR_PER_MILLION setzen.",
+      "perInquiry": "Kosten je Vorgang",
+      "total": "Kosten gesamt",
+      "inquiries_one": "{{count}} Vorgang",
+      "inquiries_other": "{{count}} Vorgänge",
+      "tokensPerInquiry": "Eingabe-Tokens je Vorgang",
+      "outputTokens_one": "{{formatted}} Ausgabe-Token",
+      "outputTokens_other": "{{formatted}} Ausgabe-Tokens",
+      "inquiriesColumn": "Vorgänge",
+      "inputTokens": "Eingabe-Tokens",
+      "outputTokensColumn": "Ausgabe-Tokens",
+      "cost": "Kosten"
     }
   },
   "feedback": {

@@ -51,6 +51,7 @@ async def extraction_execution() -> AsyncIterator[ExtractionExecutionService]:
             MinioService(settings),
             settings,
             ReviewedMemoryRepository(database.session_factory),
+            usage_sessions=database.session_factory,
         )
 
 

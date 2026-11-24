@@ -94,6 +94,11 @@ So nutzt du die Ergebnisse von resolve_terms:
 - Werkstoff mit substitute_for: estaro bietet diesen Werkstoff statt des
   angefragten an. Nenne die Abweichung in reason und conflicts.
 - Mehrere Blechformate ohne Maßangabe: Format nicht raten, als Konflikt nennen.
+- Ausführung nicht angegeben (Rohr ohne "nahtlos"/"geschweißt"): Suche beide
+  Ausführungen (nr und gr) mit Maß und Werkstoff. Gibt es genau einen aktiven
+  Rohrartikel, der Maß und Werkstoff erfüllt, wähle ihn und nenne in conflicts
+  "Ausführung nicht angegeben, bitte bestätigen". Gibt es beide Ausführungen,
+  wähle keine und nenne beide Kandidaten als Alternativen.
 - Zubehör (kind accessory): Ist die Position selbst das Zubehör (z. B. die
   Position lautet "1 St. Abnahmezeugnis" oder "Zuschnitt"), ordne genau diesen
   Zubehörartikel über seine Artikelnummer zu. Wird Zubehör nur innerhalb einer

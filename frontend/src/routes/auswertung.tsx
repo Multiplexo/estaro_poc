@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { usePilotMetrics, type PilotMetrics } from '@/hooks/use-pilot-metrics'
+import { usePilotMetrics, type CostMetrics, type PilotMetrics } from '@/hooks/use-pilot-metrics'
 
 export const Route = createFileRoute('/auswertung')({
   component: MetricsPage,
@@ -33,7 +33,64 @@ function MetricsPage() {
       {metrics.data ? (metrics.data.reviewed_inquiries === 0
         ? <p className="text-sm text-muted-foreground">{t('metrics.empty')}</p>
         : <MetricsContent data={metrics.data} />) : null}
+      {metrics.data && metrics.data.costs.inquiries > 0 ? <CostsCard costs={metrics.data.costs} /> : null}
     </div>
+  )
+}
+
+function euro(value: number | null): string {
+  return value === null ? '–' : value.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 4 })
+}
+
+function tokens(value: number): string {
+  return value.toLocaleString('de-DE')
+}
+
+function CostsCard({ costs }: { costs: CostMetrics }) {
+  const { t } = useTranslation()
+  const tiles = [
+    { label: t('metrics.costs.perInquiry'), value: euro(costs.cost_per_inquiry_eur) },
+    { label: t('metrics.costs.total'), value: euro(costs.cost_eur), detail: t('metrics.costs.inquiries', { count: costs.inquiries }) },
+    { label: t('metrics.costs.tokensPerInquiry'), value: tokens(costs.input_tokens_per_inquiry), detail: t('metrics.costs.outputTokens', { count: costs.output_tokens_per_inquiry, formatted: tokens(costs.output_tokens_per_inquiry) }) },
+  ]
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('metrics.costs.title')}</CardTitle>
+        <CardDescription>{costs.cost_eur === null ? t('metrics.costs.noPrices') : t('metrics.costs.description')}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <dl className="grid gap-4 sm:grid-cols-3">
+          {tiles.map((tile) => (
+            <div key={tile.label}>
+              <dt className="text-sm text-muted-foreground">{tile.label}</dt>
+              <dd className="text-2xl font-semibold tabular-nums">{tile.value}</dd>
+              {tile.detail ? <dd className="text-xs text-muted-foreground">{tile.detail}</dd> : null}
+            </div>
+          ))}
+        </dl>
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead>{t('metrics.week')}</TableHead>
+            <TableHead className="text-right">{t('metrics.costs.inquiriesColumn')}</TableHead>
+            <TableHead className="text-right">{t('metrics.costs.inputTokens')}</TableHead>
+            <TableHead className="text-right">{t('metrics.costs.outputTokensColumn')}</TableHead>
+            <TableHead className="text-right">{t('metrics.costs.cost')}</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {costs.weekly.map((week) => (
+              <TableRow key={week.week}>
+                <TableCell>{week.week}</TableCell>
+                <TableCell className="text-right tabular-nums">{week.inquiries}</TableCell>
+                <TableCell className="text-right tabular-nums">{tokens(week.input_tokens)}</TableCell>
+                <TableCell className="text-right tabular-nums">{tokens(week.output_tokens)}</TableCell>
+                <TableCell className="text-right tabular-nums">{euro(week.cost_eur)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   )
 }
 

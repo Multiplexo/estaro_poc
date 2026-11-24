@@ -6,13 +6,19 @@ or article that was assigned manually instead of accepted from matching.
 
 import re
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Protocol
+from uuid import UUID
 
 from app.models.domain.pilot_metrics import (
+    CostMetrics,
     FieldCorrections,
     FieldGroup,
     PilotMetrics,
     ReviewedInquiry,
+    WeeklyCosts,
     WeeklyMetrics,
 )
 from app.models.jobs.extraction import CUSTOMER_FIELD_NAMES, extraction_fields
@@ -126,5 +132,61 @@ def compute_pilot_metrics(items: list[ReviewedInquiry]) -> PilotMetrics:
                 ),
             )
             for week, week_outcomes in sorted(by_week.items())
+        ],
+    )
+
+
+class UsageEntry(Protocol):
+    created_at: datetime
+    inquiry_id: UUID | None
+    input_tokens: int
+    output_tokens: int
+
+
+def _cost(
+    input_tokens: int, output_tokens: int, prices: tuple[float, float] | None
+) -> float | None:
+    if prices is None:
+        return None
+    return round(
+        input_tokens / 1_000_000 * prices[0] + output_tokens / 1_000_000 * prices[1], 4
+    )
+
+
+def compute_cost_metrics(
+    entries: Sequence[UsageEntry], prices: tuple[float, float] | None
+) -> CostMetrics:
+    if not entries:
+        return CostMetrics()
+    inquiries = {entry.inquiry_id for entry in entries if entry.inquiry_id}
+    input_tokens = sum(entry.input_tokens for entry in entries)
+    output_tokens = sum(entry.output_tokens for entry in entries)
+    count = max(len(inquiries), 1)
+    by_week: dict[str, list[UsageEntry]] = defaultdict(list)
+    for entry in entries:
+        year, week, _ = entry.created_at.isocalendar()
+        by_week[f"{year}-W{week:02d}"].append(entry)
+    total = _cost(input_tokens, output_tokens, prices)
+    return CostMetrics(
+        inquiries=len(inquiries),
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        input_tokens_per_inquiry=input_tokens // count,
+        output_tokens_per_inquiry=output_tokens // count,
+        cost_eur=total,
+        cost_per_inquiry_eur=round(total / count, 4) if total is not None else None,
+        weekly=[
+            WeeklyCosts(
+                week=week,
+                inquiries=len({e.inquiry_id for e in week_entries if e.inquiry_id}),
+                input_tokens=sum(e.input_tokens for e in week_entries),
+                output_tokens=sum(e.output_tokens for e in week_entries),
+                cost_eur=_cost(
+                    sum(e.input_tokens for e in week_entries),
+                    sum(e.output_tokens for e in week_entries),
+                    prices,
+                ),
+            )
+            for week, week_entries in sorted(by_week.items())
         ],
     )
